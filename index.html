@@ -34,6 +34,9 @@
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link href="https://fonts.googleapis.com/css2?family=Sarabun:wght@300;400;500;600;700;800&display=swap" rel="stylesheet" />
 
+    <!-- html2pdf.js for Client-Side High-Resolution PDF Export -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
+
     <style>
       :root {
         --primary: #1565c0;
@@ -504,9 +507,9 @@
       }
 
       .viewfinder-frame {
-        width: 82%;
-        max-width: 360px;
-        aspect-ratio: 1 / 1.414; /* A4 Ratio */
+        width: 90%;
+        max-width: 460px;
+        aspect-ratio: 210 / 148; /* A5 Landscape Ratio */
         border: 2px solid rgba(255, 255, 255, 0.85);
         border-radius: 8px;
         position: relative;
@@ -903,7 +906,7 @@
       }
 
       /* =========================================================
-         PRINTABLE A5 ANSWER SHEET DESIGN (148mm × 210mm)
+         PRINTABLE A5 LANDSCAPE ANSWER SHEET DESIGN (210mm × 148mm)
          ========================================================= */
       #printableContainer {
         background: #f8fafc;
@@ -928,10 +931,15 @@
         transition: transform 0.2s ease;
       }
 
-      /* On mobile & default preview: scaled to ~75% */
+      /* Preview Scaling */
+      .a5-preview-scaler.scale-50 #answer-sheet-printable {
+        transform: scale(0.5);
+        margin-bottom: -280px;
+      }
+
       .a5-preview-scaler.scale-75 #answer-sheet-printable {
         transform: scale(0.75);
-        margin-bottom: -198px;
+        margin-bottom: -140px;
       }
 
       .a5-preview-scaler.scale-100 #answer-sheet-printable {
@@ -939,19 +947,19 @@
         margin-bottom: 0;
       }
 
-      @media screen and (max-width: 600px) {
-        .a5-preview-scaler:not(.scale-100) #answer-sheet-printable {
-          transform: scale(0.75);
-          margin-bottom: -198px;
+      @media screen and (max-width: 768px) {
+        .a5-preview-scaler:not(.scale-100):not(.scale-75) #answer-sheet-printable {
+          transform: scale(0.5);
+          margin-bottom: -280px;
         }
       }
 
-      /* A5 Paper Boundary: 559px x 794px at 96dpi (148mm x 210mm) */
+      /* A5 Landscape Paper Boundary: 794px x 559px at 96dpi (210mm x 148mm) */
       #answer-sheet-printable {
-        width: 559px;
-        height: 794px;
-        min-width: 559px;
-        min-height: 794px;
+        width: 794px;
+        height: 559px;
+        min-width: 794px;
+        min-height: 559px;
         background: #ffffff;
         border: 1px solid #ccc;
         box-shadow: 0 4px 20px rgba(0, 0, 0, 0.12);
@@ -977,52 +985,53 @@
       .reg-bl { bottom: 4px; left: 4px; }
       .reg-br { bottom: 4px; right: 4px; }
 
-      /* ZONE 1: Header (height: ~40px) */
-      .a5-zone-header {
+      /* LEFT PANE: Info, ID Grid, & Instructions (width: ~268px, height: ~518px) */
+      .a5-left-pane {
         position: absolute;
-        top: 14px;
-        left: 30px;
-        right: 30px;
-        height: 42px;
-        text-align: center;
+        left: 26px;
+        top: 20px;
+        width: 268px;
+        height: 518px;
         display: flex;
         flex-direction: column;
-        justify-content: center;
+        justify-content: space-between;
+        box-sizing: border-box;
+      }
+
+      /* ZONE 1: Header in Left Pane */
+      .a5-zone-header {
+        text-align: center;
         border-bottom: 1.5px solid #000000;
         padding-bottom: 4px;
       }
 
       .a5-header-title {
-        font-size: 11pt;
+        font-size: 10pt;
         font-weight: 700;
         color: #000000;
         line-height: 1.25;
       }
 
       .a5-header-subtitle {
-        font-size: 9pt;
+        font-size: 8pt;
         color: #000000;
         margin-top: 2px;
         line-height: 1.2;
       }
 
-      /* ZONE 2: Student Info Fields (height: ~70px) */
+      /* ZONE 2: Student Info Fields */
       .a5-zone-info {
-        position: absolute;
-        top: 62px;
-        left: 30px;
-        right: 30px;
-        height: 62px;
         display: flex;
         flex-direction: column;
-        justify-content: space-between;
+        gap: 6px;
+        margin-top: 4px;
       }
 
       .a5-info-row {
         display: flex;
         align-items: flex-end;
-        gap: 16px;
-        font-size: 9pt;
+        gap: 8px;
+        font-size: 8.5pt;
         color: #000000;
       }
 
@@ -1032,7 +1041,7 @@
       }
 
       .a5-info-label {
-        font-size: 9pt;
+        font-size: 8.5pt;
         font-weight: 600;
         white-space: nowrap;
         margin-right: 4px;
@@ -1041,27 +1050,24 @@
       .a5-info-line {
         flex: 1;
         border-bottom: 1px solid #000000;
-        height: 15px;
+        height: 14px;
         display: inline-block;
-        min-width: 30px;
+        min-width: 24px;
       }
 
-      /* ZONE 3: Student ID Grid (height: ~165px) */
+      /* ZONE 3: Student ID Grid (8 digits) */
       .a5-zone-id {
-        position: absolute;
-        left: 185px;
-        top: 130px;
-        width: 128px;
         display: flex;
         flex-direction: column;
         align-items: center;
+        margin-top: 4px;
       }
 
       .a5-id-title {
         font-size: 8pt;
         font-weight: 700;
         text-align: center;
-        line-height: 14px;
+        line-height: 13px;
         margin-bottom: 3px;
         white-space: nowrap;
       }
@@ -1107,55 +1113,111 @@
         line-height: 1;
       }
 
-      /* ZONE 4: Answer Bubbles Grid (height: ~390px) */
-      .a5-zone-answers {
-        position: absolute;
-        left: 45px;
-        top: 364px;
-        width: 469px;
-        height: 348px;
-        border: 1px solid #000000;
-        padding: 4px;
-        box-sizing: border-box;
+      /* ZONE 5: Footer / Instructions */
+      .a5-zone-footer {
+        border-top: 1px dashed #64748b;
+        padding-top: 4px;
+        text-align: center;
+        margin-top: auto;
       }
 
-      .a5-answers-col {
+      .a5-footer-text {
+        font-size: 7pt;
+        font-weight: 600;
+        color: #000000;
+        text-align: center;
+      }
+
+      .a5-footer-examples {
+        display: flex;
+        justify-content: center;
+        gap: 10px;
+        margin-top: 2px;
+        font-size: 7pt;
+        color: #000000;
+      }
+
+      .a5-ex-item {
+        display: inline-flex;
+        align-items: center;
+        gap: 2px;
+      }
+
+      .a5-ex-dot {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        width: 11px;
+        height: 11px;
+        font-size: 7.5pt;
+        font-weight: 700;
+      }
+
+      .a5-ex-dot.filled { color: #000000; }
+      .a5-ex-dot.cross { color: #000000; }
+      .a5-ex-dot.check { color: #000000; }
+
+      /* RIGHT PANE: Answer Grid (width: ~458px, height: ~518px) */
+      .a5-right-pane {
         position: absolute;
-        top: 6px;
-        width: 95px;
+        left: 308px;
+        top: 20px;
+        width: 458px;
+        height: 518px;
+        border: 1.2px solid #000000;
+        box-sizing: border-box;
+        background: #ffffff;
+        padding: 6px 10px;
         display: flex;
         flex-direction: column;
       }
 
-      .a5-answers-col.col-1 {
-        left: 10px; /* 45px + 10px = 55px (colBaseX) */
+      .a5-right-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        border-bottom: 1px solid #000000;
+        padding-bottom: 4px;
+        margin-bottom: 4px;
+        font-size: 8.5pt;
+        font-weight: 700;
+        color: #000000;
       }
 
-      .a5-answers-col.col-2 {
-        left: 250px; /* 45px + 250px = 295px (colBaseX) */
+      .a5-zone-answers {
+        display: flex;
+        gap: 14px;
+        flex: 1;
+        justify-content: space-around;
+      }
+
+      .a5-answers-col {
+        width: 205px;
+        display: flex;
+        flex-direction: column;
       }
 
       .a5-q-row {
-        height: 17px;
+        height: 22px;
         display: flex;
         align-items: center;
         box-sizing: border-box;
-        padding: 1px 0;
+        padding: 0;
       }
 
       .a5-q-num {
         font-size: 8pt;
         font-weight: 700;
-        width: 22px;
-        margin-right: 2px;
+        width: 26px;
+        margin-right: 4px;
         text-align: right;
         color: #000000;
-        line-height: 17px;
+        line-height: 22px;
       }
 
       .a5-bubbles-group {
         display: flex;
-        gap: 4px;
+        gap: 6px;
       }
 
       .a5-bubble {
@@ -1174,70 +1236,12 @@
         line-height: 1;
       }
 
-      /* ZONE 5: Footer / Instructions (height: ~35px) */
-      .a5-zone-footer {
-        position: absolute;
-        top: 720px;
-        left: 30px;
-        right: 30px;
-        height: 35px;
-        text-align: center;
-        display: flex;
-        flex-direction: column;
-        align-items: center;
-        justify-content: center;
-      }
-
-      .a5-footer-text {
-        font-size: 7.5pt;
-        font-weight: 600;
-        color: #000000;
-        text-align: center;
-      }
-
-      .a5-footer-examples {
-        display: flex;
-        justify-content: center;
-        gap: 14px;
-        margin-top: 3px;
-        font-size: 7.5pt;
-        color: #000000;
-      }
-
-      .a5-ex-item {
-        display: inline-flex;
-        align-items: center;
-        gap: 3px;
-      }
-
-      .a5-ex-dot {
-        display: inline-flex;
-        align-items: center;
-        justify-content: center;
-        width: 12px;
-        height: 12px;
-        font-size: 8pt;
-        font-weight: 700;
-      }
-
-      .a5-ex-dot.filled {
-        color: #000000;
-      }
-
-      .a5-ex-dot.cross {
-        color: #000000;
-      }
-
-      .a5-ex-dot.check {
-        color: #000000;
-      }
-
       /* =========================================================
-         PRINT MEDIA SPECIFICATIONS (A5 PORTRAIT)
+         PRINT MEDIA SPECIFICATIONS (A5 LANDSCAPE)
          ========================================================= */
       @media print {
         @page {
-          size: A5 portrait;
+          size: A5 landscape;
           margin: 8mm;
         }
 
@@ -1291,8 +1295,8 @@
         }
 
         #answer-sheet-printable {
-          width: 132mm !important;
-          height: 194mm !important;
+          width: 194mm !important;
+          height: 132mm !important;
           min-width: 0 !important;
           min-height: 0 !important;
           border: none !important;
@@ -1432,29 +1436,33 @@
 
 
       <!-- ============================================
-           TAB 2: กระดาษคำตอบ (PRINTABLE SHEET A5)
+           TAB 2: กระดาษคำตอบ (PRINTABLE SHEET A5 LANDSCAPE)
            ============================================ -->
       <section class="tab-page" id="tab-sheet">
         <div class="card print-hide">
-          <h2 class="card-title">📄 สร้างและพิมพ์กระดาษคำตอบ A5 (148 × 210 มม.)</h2>
-          <p class="card-subtitle">กระดาษคำตอบขนาด A5 พิมพ์ได้ 2 แผ่นต่อ A4 หนึ่งแผ่น ประหยัดกระดาษ 50% พร้อม Registration Marks 4 มุมสำหรับจัดระนาบ OMR</p>
+          <h2 class="card-title">📄 สร้างและพิมพ์กระดาษคำตอบ A5 แนวนอน (210 × 148 มม.)</h2>
+          <p class="card-subtitle">กระดาษคำตอบขนาด A5 แนวนอน (Landscape) พิมพ์ได้ 2 แผ่นต่อ A4 หนึ่งแผ่น ประหยัดกระดาษ 50% พร้อม Registration Marks 4 มุมสำหรับจัดระนาบ OMR</p>
           
           <div style="display: flex; gap: 10px; flex-wrap: wrap; align-items: center; margin-top: 8px;">
-            <button type="button" class="btn btn-primary" id="btnPrintSheet">
-              🖨️ พิมพ์กระดาษคำตอบ A5 (Print A5)
+            <button type="button" class="btn btn-primary" id="btnDownloadPdf">
+              📥 ดาวน์โหลดเป็น PDF (Download PDF)
+            </button>
+            <button type="button" class="btn btn-secondary" id="btnPrintSheet">
+              🖨️ พิมพ์กระดาษคำตอบ (Print)
             </button>
             <button type="button" class="btn btn-secondary" id="btnRefreshSheet">
               🔄 สร้างกระดาษคำตอบใหม่
             </button>
             <div style="margin-left: auto; display: flex; gap: 6px; align-items: center; font-size: 12px;">
               <span style="color: var(--text-muted);">ย่อ-ขยายพรีวิว:</span>
+              <button type="button" class="btn btn-secondary" id="btnScale50" style="padding: 4px 8px; font-size: 11px;">50% (มือถือ)</button>
               <button type="button" class="btn btn-secondary" id="btnScale75" style="padding: 4px 8px; font-size: 11px;">75% (พอดีจอ)</button>
               <button type="button" class="btn btn-secondary" id="btnScale100" style="padding: 4px 8px; font-size: 11px;">100% (ขนาดจริง)</button>
             </div>
           </div>
         </div>
 
-        <!-- Printable Paper Area (A5: 559px x 794px at 96dpi) -->
+        <!-- Printable Paper Area (A5 Landscape: 794px x 559px at 96dpi) -->
         <div id="printableContainer">
           <div class="a5-preview-scaler scale-75" id="sheetPreviewScaler">
             <div id="answer-sheet-printable">
@@ -1464,67 +1472,76 @@
               <div class="reg-corner reg-bl"></div>
               <div class="reg-corner reg-br"></div>
 
-              <!-- ZONE 1: Header (height: ~40px) -->
-              <div class="a5-zone-header">
-                <div class="a5-header-title">
-                  ชื่อโรงเรียน / วิชา: <span id="sheetSubjectName">การสอบวัดผลสัมฤทธิ์ทางการเรียน</span>
+              <!-- LEFT PANE: Info, Student ID Grid & Instructions -->
+              <div class="a5-left-pane">
+                <!-- ZONE 1: Header -->
+                <div class="a5-zone-header">
+                  <div class="a5-header-title">
+                    ชื่อโรงเรียน / วิชา: <span id="sheetSubjectName">การสอบวัดผลสัมฤทธิ์ทางการเรียน</span>
+                  </div>
+                  <div class="a5-header-subtitle" id="sheetExamSubtitle">
+                    กระดาษคำตอบแบบปรนัย (OMR Exam Sheet) — ขนาด A5 แนวนอน
+                  </div>
                 </div>
-                <div class="a5-header-subtitle" id="sheetExamSubtitle">
-                  กระดาษคำตอบแบบปรนัย (OMR Exam Sheet) — ขนาด A5
+
+                <!-- ZONE 2: Student Info Fields -->
+                <div class="a5-zone-info">
+                  <!-- Row 1: ชื่อ-สกุล & ชั้น/ห้อง -->
+                  <div class="a5-info-row">
+                    <div class="a5-info-field" style="flex: 1.6;">
+                      <span class="a5-info-label">ชื่อ-สกุล:</span>
+                      <span class="a5-info-line"></span>
+                    </div>
+                    <div class="a5-info-field" style="width: 85px;">
+                      <span class="a5-info-label">ชั้น/ห้อง:</span>
+                      <span class="a5-info-line"></span>
+                    </div>
+                  </div>
+
+                  <!-- Row 2: เลขที่ & คะแนน -->
+                  <div class="a5-info-row">
+                    <div class="a5-info-field" style="width: 80px;">
+                      <span class="a5-info-label">เลขที่:</span>
+                      <span class="a5-info-line"></span>
+                    </div>
+                    <div class="a5-info-field" style="flex: 1.4; justify-content: flex-end;">
+                      <span class="a5-info-label">คะแนน:</span>
+                      <span class="a5-info-line" style="max-width: 50px;"></span>
+                      <span class="a5-info-label" style="margin: 0 3px;">/</span>
+                      <span class="a5-info-line" style="max-width: 45px; text-align: center;" id="sheetMaxScoreText">40</span>
+                    </div>
+                  </div>
+                </div>
+
+                <!-- ZONE 3: Student ID Grid (8 digits) -->
+                <div class="a5-zone-id">
+                  <div class="a5-id-title">เลขประจำตัวนักเรียน (8 หลัก)</div>
+                  <div class="a5-id-grid" id="sheetIdColsContainer">
+                    <!-- Rendered by JS -->
+                  </div>
+                </div>
+
+                <!-- ZONE 5: Footer / Instructions -->
+                <div class="a5-zone-footer">
+                  <div class="a5-footer-text">
+                    คำชี้แจง: ใช้ดินสอ 2B ฝนให้ดำเต็มวง ● ห้ามกา ✕ หรือขีด ✔
+                  </div>
+                  <div class="a5-footer-examples">
+                    <span class="a5-ex-item"><span class="a5-ex-dot filled">●</span> ถูก</span>
+                    <span class="a5-ex-item"><span class="a5-ex-dot cross">✕</span> ผิด</span>
+                    <span class="a5-ex-item"><span class="a5-ex-dot check">✔</span> ผิด</span>
+                  </div>
                 </div>
               </div>
 
-              <!-- ZONE 2: Student Info Fields (height: ~70px) -->
-              <div class="a5-zone-info">
-                <!-- Row 1: ชื่อ-สกุล & ชั้น/ห้อง -->
-                <div class="a5-info-row">
-                  <div class="a5-info-field" style="flex: 1.8;">
-                    <span class="a5-info-label">ชื่อ-สกุล:</span>
-                    <span class="a5-info-line"></span>
-                  </div>
-                  <div class="a5-info-field" style="width: 130px;">
-                    <span class="a5-info-label">ชั้น/ห้อง:</span>
-                    <span class="a5-info-line"></span>
-                  </div>
+              <!-- RIGHT PANE: Answer Grid (Zone 4) -->
+              <div class="a5-right-pane">
+                <div class="a5-right-header">
+                  <span>ส่วนที่ 1: แบบปรนัย 4 ตัวเลือก (ก, ข, ค, ง)</span>
+                  <span style="font-size: 7.5pt; font-weight: normal; color: #333;">ฝนดำวงกลมที่ต้องการเลือก</span>
                 </div>
-
-                <!-- Row 2: เลขที่ & คะแนน -->
-                <div class="a5-info-row">
-                  <div class="a5-info-field" style="width: 130px;">
-                    <span class="a5-info-label">เลขที่:</span>
-                    <span class="a5-info-line"></span>
-                  </div>
-                  <div class="a5-info-field" style="flex: 1.8; justify-content: flex-end;">
-                    <span class="a5-info-label">คะแนน:</span>
-                    <span class="a5-info-line" style="max-width: 60px;"></span>
-                    <span class="a5-info-label" style="margin: 0 4px;">/</span>
-                    <span class="a5-info-line" style="max-width: 50px; text-align: center;" id="sheetMaxScoreText">40</span>
-                  </div>
-                </div>
-              </div>
-
-              <!-- ZONE 3: Student ID Grid (height: ~165px) -->
-              <div class="a5-zone-id">
-                <div class="a5-id-title">เลขประจำตัว (8 หลัก)</div>
-                <div class="a5-id-grid" id="sheetIdColsContainer">
+                <div class="a5-zone-answers" id="sheetAnswersContainer">
                   <!-- Rendered by JS -->
-                </div>
-              </div>
-
-              <!-- ZONE 4: Answer Bubbles Grid (height: ~390px) -->
-              <div class="a5-zone-answers" id="sheetAnswersContainer">
-                <!-- Rendered by JS -->
-              </div>
-
-              <!-- ZONE 5: Footer / Instructions (height: ~35px) -->
-              <div class="a5-zone-footer">
-                <div class="a5-footer-text">
-                  คำชี้แจง: ใช้ดินสอ 2B ฝนให้ดำเต็มวง ● ห้ามกา ✕ หรือขีด ✔
-                </div>
-                <div class="a5-footer-examples">
-                  <span class="a5-ex-item"><span class="a5-ex-dot filled">●</span> ถูก</span>
-                  <span class="a5-ex-item"><span class="a5-ex-dot cross">✕</span> ผิด</span>
-                  <span class="a5-ex-item"><span class="a5-ex-dot check">✔</span> ผิด</span>
                 </div>
               </div>
             </div>
@@ -1782,16 +1799,16 @@
 
       const CHOICES = ['ก', 'ข', 'ค', 'ง'];
 
-      // Canonical Normalized Canvas Coordinates (Standard A5: 559 x 794 at 96dpi)
-      const CANVAS_WIDTH = 559;
-      const CANVAS_HEIGHT = 794;
+      // Canonical Normalized Canvas Coordinates (Standard A5 Landscape: 794 x 559 at 96dpi)
+      const CANVAS_WIDTH = 794;
+      const CANVAS_HEIGHT = 559;
 
       // 4 Registration Mark Centers in canonical space (Solid 12x12px at 4px inset)
       const CANONICAL_CORNERS = {
         tl: { x: 10, y: 10 },
-        tr: { x: 549, y: 10 },
-        bl: { x: 10, y: 784 },
-        br: { x: 549, y: 784 }
+        tr: { x: 784, y: 10 },
+        bl: { x: 10, y: 549 },
+        br: { x: 784, y: 549 }
       };
 
       // --- APPLICATION STATE ---
@@ -1864,8 +1881,10 @@
         btnResetCalibration: document.getElementById('btnResetCalibration'),
         btnDownloadHtml: document.getElementById('btnDownloadHtml'),
         // Sheet tab
+        btnDownloadPdf: document.getElementById('btnDownloadPdf'),
         btnPrintSheet: document.getElementById('btnPrintSheet'),
         btnRefreshSheet: document.getElementById('btnRefreshSheet'),
+        btnScale50: document.getElementById('btnScale50'),
         btnScale75: document.getElementById('btnScale75'),
         btnScale100: document.getElementById('btnScale100'),
         sheetPreviewScaler: document.getElementById('sheetPreviewScaler'),
@@ -1932,11 +1951,11 @@
         }, 3200);
       }
 
-      // --- COORDINATE MAPPING GENERATOR (A5 PAPER) ---
+      // --- COORDINATE MAPPING GENERATOR (A5 LANDSCAPE PAPER: 794 x 559) ---
       /**
        * Returns normalized canonical (x, y) coordinates for question bubble
-       * A5 normalized canvas size: 559 x 794 (at 96dpi)
-       * Usable area starts after 8mm margin (approx x: 30, y: 30)
+       * A5 Landscape normalized canvas size: 794 x 559 (at 96dpi)
+       * Right pane answers grid located at left: 308px, top: 20px
        * @param {number} question Question number (1..40)
        * @param {number} choiceIndex Choice index (0:ก, 1:ข, 2:ค, 3:ง)
        */
@@ -1946,28 +1965,29 @@
         const isCol2 = question > 20;
         const rowInCol = isCol2 ? question - 21 : question - 1;
 
-        const colBaseX = isCol2 ? 295 : 55;
-        const qLabelWidth = 24;
-        const bubbleSpacing = 17; // 13px bubble + 4px gap
+        const colBaseX = isCol2 ? 541 : 322;
+        const qLabelWidth = 30; // 26px width + 4px margin
+        const bubbleSpacing = 19; // 13px bubble + 6px gap
 
         const x = colBaseX + qLabelWidth + (choiceIndex * bubbleSpacing) + 6.5;
-        const y = 370 + (rowInCol * 17) + 8.5; // starts at Y=370, 17px per row
+        const y = 54 + (rowInCol * 22) + 11; // starts at Y=54, 22px per row, centered
 
         return { x, y };
       }
 
       /**
        * Returns normalized canonical (x, y) coordinates for student ID bubble
+       * Left pane student ID grid located at startX: 96px, startY: 163px
        * @param {number} digitPosition Digit position (0..7 left to right)
        * @param {number} digitValue Digit value (0..9 top to bottom)
        */
       function getStudentIDBubbleCoords(digitPosition, digitValue) {
         // digitPosition: 0-7 (left to right)
         // digitValue: 0-9 (top to bottom)
-        const gridStartX = 185; // centered on 559px width
-        const colSpacing = 16;  // 13px bubble + 3px gap
-        const rowSpacing = 15;  // 13px bubble + 2px gap
-        const gridStartY = 165; // after student info fields
+        const gridStartX = 96; // centered in left pane (left: 26px, width: 268px)
+        const colSpacing = 16; // 13px bubble + 3px gap
+        const rowSpacing = 15; // 13px bubble + 2px gap
+        const gridStartY = 163; // Y coordinate where digit 0 bubble begins
 
         const x = gridStartX + (digitPosition * colSpacing) + 6.5;
         const y = gridStartY + (digitValue * rowSpacing) + 6.5;
@@ -2156,13 +2176,13 @@
         notify('บันทึกเฉลยข้อสอบเรียบร้อยแล้ว', 'success');
       });
 
-      // --- PRINTABLE SHEET GENERATION (A5: 148mm × 210mm) ---
+      // --- PRINTABLE SHEET GENERATION (A5 LANDSCAPE: 210mm × 148mm) ---
       function renderPrintableSheet() {
         if (dom.sheetSubjectName) {
           dom.sheetSubjectName.textContent = appState.examTitle || 'การสอบวัดผลสัมฤทธิ์ทางการเรียน';
         }
         if (dom.sheetExamSubtitle) {
-          dom.sheetExamSubtitle.textContent = `กระดาษคำตอบแบบปรนัย (OMR Exam Sheet) — ขนาด A5`;
+          dom.sheetExamSubtitle.textContent = `กระดาษคำตอบแบบปรนัย (OMR Exam Sheet) — ขนาด A5 แนวนอน`;
         }
         if (dom.sheetMaxScoreText) {
           dom.sheetMaxScoreText.textContent = String(appState.questionCount);
@@ -2235,35 +2255,101 @@
         return row;
       }
 
-      // Preview Scaler Handlers
-      if (dom.btnScale75) {
-        dom.btnScale75.addEventListener('click', () => {
-          if (dom.sheetPreviewScaler) {
-            dom.sheetPreviewScaler.classList.remove('scale-100');
-            dom.sheetPreviewScaler.classList.add('scale-75');
-          }
-          dom.btnScale75.classList.add('btn-primary');
-          dom.btnScale75.classList.remove('btn-secondary');
-          if (dom.btnScale100) {
-            dom.btnScale100.classList.add('btn-secondary');
-            dom.btnScale100.classList.remove('btn-primary');
-          }
-        });
+      // Preview Scaler Handlers (50%, 75%, 100%)
+      function setSheetScale(scaleClass) {
+        if (!dom.sheetPreviewScaler) return;
+        dom.sheetPreviewScaler.classList.remove('scale-50', 'scale-75', 'scale-100');
+        dom.sheetPreviewScaler.classList.add(scaleClass);
+
+        if (dom.btnScale50) {
+          dom.btnScale50.className = scaleClass === 'scale-50' ? 'btn btn-primary' : 'btn btn-secondary';
+          dom.btnScale50.style.fontSize = '11px';
+          dom.btnScale50.style.padding = '4px 8px';
+        }
+        if (dom.btnScale75) {
+          dom.btnScale75.className = scaleClass === 'scale-75' ? 'btn btn-primary' : 'btn btn-secondary';
+          dom.btnScale75.style.fontSize = '11px';
+          dom.btnScale75.style.padding = '4px 8px';
+        }
+        if (dom.btnScale100) {
+          dom.btnScale100.className = scaleClass === 'scale-100' ? 'btn btn-primary' : 'btn btn-secondary';
+          dom.btnScale100.style.fontSize = '11px';
+          dom.btnScale100.style.padding = '4px 8px';
+        }
       }
 
+      if (dom.btnScale50) {
+        dom.btnScale50.addEventListener('click', () => setSheetScale('scale-50'));
+      }
+      if (dom.btnScale75) {
+        dom.btnScale75.addEventListener('click', () => setSheetScale('scale-75'));
+      }
       if (dom.btnScale100) {
-        dom.btnScale100.addEventListener('click', () => {
-          if (dom.sheetPreviewScaler) {
-            dom.sheetPreviewScaler.classList.remove('scale-75');
-            dom.sheetPreviewScaler.classList.add('scale-100');
+        dom.btnScale100.addEventListener('click', () => setSheetScale('scale-100'));
+      }
+
+      // PDF Download Handler (High-Resolution A5 Landscape)
+      async function downloadSheetAsPDF() {
+        const sheetEl = document.getElementById('answer-sheet-printable');
+        if (!sheetEl) return;
+
+        notify('กำลังสร้างไฟล์ PDF กระดาษคำตอบ A5 แนวนอน...', 'info');
+
+        try {
+          const safeTitle = (appState.examTitle || 'OMR').replace(/[\/\\?%*:|"<>]/g, '_');
+          const fileName = `กระดาษคำตอบ_${safeTitle}_A5_แนวนอน.pdf`;
+
+          // Check if html2pdf is available
+          if (window.html2pdf) {
+            const opt = {
+              margin: 0,
+              filename: fileName,
+              image: { type: 'jpeg', quality: 0.98 },
+              html2canvas: {
+                scale: 2,
+                useCORS: true,
+                logging: false,
+                backgroundColor: '#ffffff'
+              },
+              jsPDF: {
+                unit: 'mm',
+                format: 'a5',
+                orientation: 'landscape'
+              }
+            };
+            await window.html2pdf().set(opt).from(sheetEl).save();
+            notify('ดาวน์โหลดไฟล์ PDF เรียบร้อยแล้ว', 'success');
+            return;
           }
-          dom.btnScale100.classList.add('btn-primary');
-          dom.btnScale100.classList.remove('btn-secondary');
-          if (dom.btnScale75) {
-            dom.btnScale75.classList.add('btn-secondary');
-            dom.btnScale75.classList.remove('btn-primary');
+
+          // Fallback to html2canvas + jsPDF if available in global
+          if (window.html2canvas && (window.jspdf || window.jsPDF)) {
+            const canvas = await window.html2canvas(sheetEl, {
+              scale: 2,
+              useCORS: true,
+              backgroundColor: '#ffffff'
+            });
+            const imgData = canvas.toDataURL('image/jpeg', 0.98);
+            const { jsPDF } = window.jspdf || window;
+            const pdf = new jsPDF({ orientation: 'landscape', unit: 'mm', format: 'a5' });
+            pdf.addImage(imgData, 'JPEG', 0, 0, 210, 148);
+            pdf.save(fileName);
+            notify('ดาวน์โหลดไฟล์ PDF เรียบร้อยแล้ว', 'success');
+            return;
           }
-        });
+
+          // Native print fallback
+          notify('กำลังเปิดหน้าต่างพิมพ์ (สามารถเลือกบันทึกเป็น PDF ได้)...', 'info');
+          window.print();
+        } catch (err) {
+          console.error('PDF export error:', err);
+          notify('เกิดข้อผิดพลาดในการสร้าง PDF เปิดหน้าต่างพิมพ์แทน...', 'warning');
+          window.print();
+        }
+      }
+
+      if (dom.btnDownloadPdf) {
+        dom.btnDownloadPdf.addEventListener('click', downloadSheetAsPDF);
       }
 
       dom.btnPrintSheet.addEventListener('click', () => {
@@ -2272,7 +2358,7 @@
 
       dom.btnRefreshSheet.addEventListener('click', () => {
         renderPrintableSheet();
-        notify('สร้างกระดาษคำตอบ A5 ใหม่เรียบร้อย', 'info');
+        notify('สร้างกระดาษคำตอบ A5 แนวนอนใหม่เรียบร้อย', 'info');
       });
 
       // --- MOBILE CAMERA ENGINE & LIVE OVERLAY ---
@@ -2367,7 +2453,7 @@
             for (let q = 1; q <= appState.questionCount; q++) {
               for (let c = 0; c < 4; c++) {
                 const norm = getQuestionBubbleCoords(q, c);
-                // Map canonical (0..559, 0..794) to viewfinder on screen
+                // Map canonical (0..794, 0..559) to viewfinder on screen
                 const dotX = left + (norm.x / CANVAS_WIDTH) * width;
                 const dotY = top + (norm.y / CANVAS_HEIGHT) * height;
 
