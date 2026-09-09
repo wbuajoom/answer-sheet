@@ -1,0 +1,6 @@
+{
+  "name": "ระบบตรวจข้อสอบกระดาษคำตอบ OMR",
+  "description": "ระบบตรวจข้อสอบกระดาษคำตอบ OMR ด้วย Computer Vision ผ่านกล้องมือถือในเบราว์เซอร์ 100% ไม่ต้องใช้ AI API รองรับการพิมพ์กระดาษ ตรวจอัตโนมัติ และส่งออก CSV",
+  "requestFramePermissions": ["camera"],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}

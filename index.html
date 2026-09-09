@@ -1,0 +1,2866 @@
+<!--
+================================================================================
+ระบบตรวจข้อสอบกระดาษคำตอบ OMR (Bubble Sheet OMR Grading System)
+เวอร์ชัน: 2.0 (Computer Vision ในเบราว์เซอร์ 100% - ไม่ต้องใช้ AI API / ไม่ใช้เซิร์ฟเวอร์)
+ภาษาไทย 100% | ตรวจจับรอยดินสอผ่าน Canvas Pixel Analysis | รองรับ GitHub Pages
+================================================================================
+
+ขั้นตอนการนำไปขึ้นใช้งานบน GitHub Pages (ใช้งานฟรีบนมือถือได้ทันที):
+--------------------------------------------------------------------------------
+1. สมัครหรือเข้าสู่ระบบที่ https://github.com
+2. สร้าง Repository ใหม่ (เช่น ชื่อ "omr-grader") และเลือกเป็น Public
+3. อัปโหลดไฟล์ "index.html" นี้เข้าไปใน Repository (ที่ Root directory)
+4. ไปที่เมนู "Settings" ของ Repository -> เลือกเมนู "Pages" (แถบด้านซ้าย)
+5. ในส่วน "Build and deployment" -> "Branch" ให้เลือก "main" (หรือ "master") และโฟลเดอร์ "/ (root)" -> กด "Save"
+6. รอประมาณ 1-2 นาที GitHub จะสร้างลิงก์เว็บไซต์ให้ เช่น:
+   https://<your-username>.github.io/omr-grader/
+7. นำลิงก์นี้ไปเปิดบนเบราว์เซอร์ในโทรศัพท์มือถือ (Chrome หรือ Safari) ใช้งานตรวจข้อสอบได้ทันที!
+================================================================================
+-->
+<!doctype html>
+<html lang="th">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover" />
+    <title>ระบบตรวจข้อสอบกระดาษคำตอบ OMR (Computer Vision)</title>
+    <meta name="description" content="ระบบตรวจข้อสอบกระดาษคำตอบ OMR ด้วย Computer Vision ผ่านกล้องมือถือในเบราว์เซอร์ 100% ไม่ต้องใช้ AI API รองรับการพิมพ์กระดาษ ตรวจอัตโนมัติ และส่งออก CSV" />
+    <meta property="og:title" content="ระบบตรวจข้อสอบกระดาษคำตอบ OMR (Computer Vision)" />
+    <meta property="og:description" content="ระบบตรวจข้อสอบกระดาษคำตอบ OMR ด้วย Computer Vision ผ่านกล้องมือถือในเบราว์เซอร์ 100% ไม่ต้องใช้ AI API" />
+    <meta property="og:type" content="website" />
+    <meta name="theme-color" content="#1565c0" />
+
+    <!-- Google Fonts: Sarabun รองรับภาษาไทย สวยงาม อ่านง่าย เป็นทางการ -->
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link href="https://fonts.googleapis.com/css2?family=Sarabun:wght@300;400;500;600;700;800&display=swap" rel="stylesheet" />
+
+    <style>
+      :root {
+        --primary: #1565c0;
+        --primary-dark: #0d47a1;
+        --primary-light: #e3f2fd;
+        --accent: #0284c7;
+        --bg-main: #f8fafc;
+        --surface: #ffffff;
+        --text-main: #0f172a;
+        --text-muted: #64748b;
+        --border: #e2e8f0;
+        --success: #16a34a;
+        --success-bg: #dcfce7;
+        --danger: #dc2626;
+        --danger-bg: #fee2e2;
+        --warning: #d97706;
+        --warning-bg: #fef3c7;
+        --radius: 12px;
+        --shadow-sm: 0 1px 3px rgba(0, 0, 0, 0.08);
+        --shadow-md: 0 4px 12px rgba(0, 0, 0, 0.08);
+        --shadow-lg: 0 10px 25px -3px rgba(0, 0, 0, 0.12);
+      }
+
+      * {
+        box-sizing: border-box;
+        margin: 0;
+        padding: 0;
+        -webkit-tap-highlight-color: transparent;
+      }
+
+      body {
+        font-family: 'Sarabun', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+        background-color: var(--bg-main);
+        color: var(--text-main);
+        line-height: 1.5;
+        min-height: 100vh;
+        display: flex;
+        flex-direction: column;
+        overflow-x: hidden;
+      }
+
+      /* App Header */
+      .app-header {
+        background: linear-gradient(135deg, var(--primary-dark) 0%, var(--primary) 100%);
+        color: #ffffff;
+        padding: 12px 16px;
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        position: sticky;
+        top: 0;
+        z-index: 40;
+        box-shadow: var(--shadow-sm);
+      }
+
+      .app-brand {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+      }
+
+      .app-logo {
+        width: 36px;
+        height: 36px;
+        background: rgba(255, 255, 255, 0.2);
+        border: 1.5px solid rgba(255, 255, 255, 0.4);
+        border-radius: 8px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 18px;
+      }
+
+      .app-title-wrap h1 {
+        font-size: 16px;
+        font-weight: 700;
+        line-height: 1.2;
+      }
+
+      .app-title-wrap p {
+        font-size: 11px;
+        color: #e0f2fe;
+        opacity: 0.95;
+      }
+
+      .header-status-badge {
+        display: flex;
+        align-items: center;
+        gap: 6px;
+        font-size: 11px;
+        padding: 5px 10px;
+        border-radius: 9999px;
+        background: rgba(0, 0, 0, 0.25);
+        color: #ffffff;
+        border: 1px solid rgba(255, 255, 255, 0.25);
+        cursor: pointer;
+      }
+
+      .status-indicator-dot {
+        width: 8px;
+        height: 8px;
+        border-radius: 50%;
+        background-color: #ef4444;
+      }
+
+      .status-indicator-dot.ready {
+        background-color: #22c55e;
+        box-shadow: 0 0 6px #22c55e;
+      }
+
+      /* Main Content Layout */
+      .app-body {
+        flex: 1;
+        display: flex;
+        flex-direction: column;
+        padding-bottom: 74px; /* Space for bottom nav */
+        width: 100%;
+        max-width: 920px;
+        margin: 0 auto;
+      }
+
+      .tab-page {
+        display: none;
+        flex-direction: column;
+        width: 100%;
+        padding: 16px;
+        animation: fadeIn 0.15s ease-out;
+      }
+
+      .tab-page.active {
+        display: flex;
+      }
+
+      @keyframes fadeIn {
+        from { opacity: 0; transform: translateY(3px); }
+        to { opacity: 1; transform: translateY(0); }
+      }
+
+      /* Cards & Containers */
+      .card {
+        background-color: var(--surface);
+        border: 1px solid var(--border);
+        border-radius: var(--radius);
+        padding: 16px;
+        margin-bottom: 16px;
+        box-shadow: var(--shadow-sm);
+      }
+
+      .card-title {
+        font-size: 15px;
+        font-weight: 700;
+        color: var(--text-main);
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        margin-bottom: 8px;
+      }
+
+      .card-subtitle {
+        font-size: 13px;
+        color: var(--text-muted);
+        margin-bottom: 14px;
+      }
+
+      /* Form Controls */
+      .form-group {
+        margin-bottom: 14px;
+      }
+
+      .form-label {
+        display: block;
+        font-size: 13px;
+        font-weight: 600;
+        color: var(--text-main);
+        margin-bottom: 6px;
+      }
+
+      .input-text, .input-select {
+        width: 100%;
+        padding: 10px 12px;
+        border: 1px solid var(--border);
+        border-radius: 8px;
+        font-family: inherit;
+        font-size: 14px;
+        background-color: #ffffff;
+        color: var(--text-main);
+        transition: border-color 0.15s;
+      }
+
+      .input-text:focus, .input-select:focus {
+        outline: none;
+        border-color: var(--primary);
+        box-shadow: 0 0 0 3px rgba(21, 101, 192, 0.15);
+      }
+
+      /* Segmented Radio Pills */
+      .radio-pills {
+        display: flex;
+        gap: 8px;
+        flex-wrap: wrap;
+      }
+
+      .radio-pill-item {
+        flex: 1;
+        min-width: 60px;
+        position: relative;
+      }
+
+      .radio-pill-item input[type="radio"] {
+        position: absolute;
+        opacity: 0;
+        width: 100%;
+        height: 100%;
+        cursor: pointer;
+      }
+
+      .radio-pill-label {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        padding: 9px 12px;
+        background: #f8fafc;
+        border: 1px solid var(--border);
+        border-radius: 8px;
+        font-size: 13px;
+        font-weight: 600;
+        cursor: pointer;
+        text-align: center;
+        transition: all 0.15s ease;
+      }
+
+      .radio-pill-item input[type="radio"]:checked + .radio-pill-label {
+        background: var(--primary);
+        color: #ffffff;
+        border-color: var(--primary);
+        box-shadow: 0 2px 6px rgba(21, 101, 192, 0.3);
+      }
+
+      /* Buttons */
+      .btn {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        gap: 6px;
+        padding: 10px 16px;
+        font-size: 14px;
+        font-weight: 600;
+        border-radius: 8px;
+        border: 1px solid transparent;
+        cursor: pointer;
+        font-family: inherit;
+        transition: all 0.15s ease;
+        text-align: center;
+        text-decoration: none;
+      }
+
+      .btn-primary {
+        background-color: var(--primary);
+        color: #ffffff;
+      }
+
+      .btn-primary:hover {
+        background-color: var(--primary-dark);
+      }
+
+      .btn-secondary {
+        background-color: #f1f5f9;
+        color: var(--text-main);
+        border-color: var(--border);
+      }
+
+      .btn-secondary:hover {
+        background-color: #e2e8f0;
+      }
+
+      .btn-danger-outline {
+        background: transparent;
+        color: var(--danger);
+        border-color: var(--danger);
+      }
+
+      .btn-danger-outline:hover {
+        background: var(--danger-bg);
+      }
+
+      .btn-block {
+        width: 100%;
+      }
+
+      /* Answer Key Grid */
+      .answer-key-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fill, minmax(130px, 1fr));
+        gap: 10px;
+        max-height: 400px;
+        overflow-y: auto;
+        padding: 6px;
+        border: 1px solid var(--border);
+        border-radius: 8px;
+        background: #fafafa;
+      }
+
+      .answer-key-row {
+        background: #ffffff;
+        border: 1px solid var(--border);
+        border-radius: 6px;
+        padding: 8px;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        gap: 6px;
+      }
+
+      .answer-key-qnum {
+        font-size: 12px;
+        font-weight: 700;
+        color: var(--text-muted);
+      }
+
+      .choice-selector-group {
+        display: flex;
+        gap: 4px;
+        width: 100%;
+        justify-content: center;
+      }
+
+      .choice-btn {
+        width: 28px;
+        height: 28px;
+        border-radius: 50%;
+        border: 1px solid #cbd5e1;
+        background: #ffffff;
+        color: #475569;
+        font-size: 12px;
+        font-weight: 700;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        cursor: pointer;
+        transition: all 0.15s ease;
+      }
+
+      .choice-btn:hover {
+        border-color: var(--primary);
+        color: var(--primary);
+      }
+
+      .choice-btn.selected {
+        background: var(--primary);
+        color: #ffffff;
+        border-color: var(--primary);
+      }
+
+      /* Bottom Navigation Bar */
+      .bottom-nav {
+        position: fixed;
+        bottom: 0;
+        left: 0;
+        right: 0;
+        height: 64px;
+        background: #ffffff;
+        border-top: 1px solid var(--border);
+        display: flex;
+        align-items: center;
+        justify-content: space-around;
+        z-index: 45;
+        padding-bottom: env(safe-area-inset-bottom, 0);
+        box-shadow: 0 -2px 10px rgba(0, 0, 0, 0.05);
+      }
+
+      .nav-tab-btn {
+        flex: 1;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        height: 100%;
+        background: none;
+        border: none;
+        color: var(--text-muted);
+        cursor: pointer;
+        font-family: inherit;
+        font-size: 11px;
+        font-weight: 500;
+        gap: 3px;
+        transition: color 0.15s ease;
+      }
+
+      .nav-tab-btn .nav-icon {
+        font-size: 20px;
+        line-height: 1;
+      }
+
+      .nav-tab-btn.active {
+        color: var(--primary);
+        font-weight: 700;
+      }
+
+      /* =========================================================
+         TAB 3: CAMERA SCAN VIEW
+         ========================================================= */
+      #tab-scan {
+        padding: 0;
+        position: relative;
+        background: #000000;
+        height: calc(100vh - 120px);
+        min-height: 480px;
+        overflow: hidden;
+      }
+
+      .camera-viewport {
+        position: relative;
+        width: 100%;
+        height: 100%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        background: #000000;
+        overflow: hidden;
+      }
+
+      #cameraVideo {
+        width: 100%;
+        height: 100%;
+        object-fit: cover;
+      }
+
+      /* Debug Canvas Canvas for Live Bubble Dots */
+      #overlayCanvas {
+        position: absolute;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        pointer-events: none;
+        z-index: 10;
+      }
+
+      /* Viewfinder Overlay */
+      .camera-overlay-ui {
+        position: absolute;
+        top: 0;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        pointer-events: none;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: space-between;
+        padding: 16px;
+        z-index: 20;
+      }
+
+      .camera-status-strip {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        background: rgba(0, 0, 0, 0.7);
+        color: #ffffff;
+        padding: 6px 14px;
+        border-radius: 20px;
+        font-size: 12px;
+        font-weight: 600;
+        backdrop-filter: blur(4px);
+        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.4);
+        margin-top: 4px;
+      }
+
+      .viewfinder-frame {
+        width: 82%;
+        max-width: 360px;
+        aspect-ratio: 1 / 1.414; /* A4 Ratio */
+        border: 2px solid rgba(255, 255, 255, 0.85);
+        border-radius: 8px;
+        position: relative;
+        box-shadow: 0 0 0 9999px rgba(0, 0, 0, 0.5);
+        pointer-events: none;
+      }
+
+      /* Corner Guides */
+      .corner-mark {
+        position: absolute;
+        width: 22px;
+        height: 22px;
+        border-color: #38bdf8;
+        border-style: solid;
+      }
+
+      .corner-tl { top: -2px; left: -2px; border-width: 4px 0 0 4px; border-top-left-radius: 6px; }
+      .corner-tr { top: -2px; right: -2px; border-width: 4px 4px 0 0; border-top-right-radius: 6px; }
+      .corner-bl { bottom: -2px; left: -2px; border-width: 0 0 4px 4px; border-bottom-left-radius: 6px; }
+      .corner-br { bottom: -2px; right: -2px; border-width: 0 4px 4px 0; border-bottom-right-radius: 6px; }
+
+      /* Camera Bottom Action Bar */
+      .camera-bottom-bar {
+        width: 100%;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        gap: 12px;
+        pointer-events: auto;
+        margin-bottom: 8px;
+      }
+
+      .main-action-buttons {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        gap: 14px;
+      }
+
+      /* Calibrate Button */
+      .btn-calibrate-shutter {
+        background: rgba(30, 41, 59, 0.85);
+        color: #ffffff;
+        border: 1.5px solid rgba(255, 255, 255, 0.4);
+        border-radius: 30px;
+        padding: 10px 18px;
+        font-size: 13px;
+        font-weight: 700;
+        cursor: pointer;
+        display: flex;
+        align-items: center;
+        gap: 6px;
+        backdrop-filter: blur(4px);
+        transition: transform 0.1s;
+      }
+
+      .btn-calibrate-shutter:active {
+        transform: scale(0.95);
+      }
+
+      /* Main Scan Button */
+      .btn-scan-shutter {
+        background: linear-gradient(135deg, #2563eb, #1d4ed8);
+        color: #ffffff;
+        border: 3px solid rgba(255, 255, 255, 0.8);
+        border-radius: 36px;
+        padding: 12px 28px;
+        font-size: 15px;
+        font-weight: 800;
+        cursor: pointer;
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        box-shadow: 0 4px 15px rgba(37, 99, 235, 0.5);
+        transition: transform 0.1s;
+      }
+
+      .btn-scan-shutter:active {
+        transform: scale(0.94);
+      }
+
+      .camera-aux-tools {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+      }
+
+      .btn-tool-pill {
+        background: rgba(0, 0, 0, 0.65);
+        color: #e2e8f0;
+        border: 1px solid rgba(255, 255, 255, 0.3);
+        border-radius: 20px;
+        padding: 6px 12px;
+        font-size: 11px;
+        font-weight: 600;
+        cursor: pointer;
+        display: flex;
+        align-items: center;
+        gap: 5px;
+        backdrop-filter: blur(4px);
+      }
+
+      /* Toast Notifications */
+      .toast-container {
+        position: fixed;
+        top: 14px;
+        left: 50%;
+        transform: translateX(-50%);
+        z-index: 120;
+        width: 90%;
+        max-width: 420px;
+        pointer-events: none;
+        display: flex;
+        flex-direction: column;
+        gap: 8px;
+      }
+
+      .toast {
+        background: #1e293b;
+        color: #ffffff;
+        padding: 12px 16px;
+        border-radius: 10px;
+        font-size: 13px;
+        font-weight: 500;
+        box-shadow: var(--shadow-lg);
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        animation: toastIn 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+        pointer-events: auto;
+      }
+
+      .toast.error { background: #991b1b; }
+      .toast.success { background: #166534; }
+      .toast.warning { background: #b45309; }
+
+      @keyframes toastIn {
+        from { opacity: 0; transform: translateY(-10px); }
+        to { opacity: 1; transform: translateY(0); }
+      }
+
+      /* Result Bottom Sheet Modal */
+      .modal-backdrop {
+        position: fixed;
+        top: 0;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        background: rgba(0, 0, 0, 0.65);
+        backdrop-filter: blur(2px);
+        display: none;
+        align-items: flex-end;
+        justify-content: center;
+        z-index: 90;
+      }
+
+      .modal-backdrop.active {
+        display: flex;
+      }
+
+      .bottom-sheet {
+        background: #ffffff;
+        width: 100%;
+        max-width: 650px;
+        max-height: 92vh;
+        border-top-left-radius: 20px;
+        border-top-right-radius: 20px;
+        display: flex;
+        flex-direction: column;
+        overflow: hidden;
+        animation: slideUp 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+        box-shadow: 0 -10px 30px rgba(0, 0, 0, 0.25);
+      }
+
+      @keyframes slideUp {
+        from { transform: translateY(100%); }
+        to { transform: translateY(0); }
+      }
+
+      .sheet-header {
+        padding: 14px 20px;
+        border-bottom: 1px solid var(--border);
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        background: #f8fafc;
+      }
+
+      .sheet-drag-pill {
+        width: 36px;
+        height: 4px;
+        background: #cbd5e1;
+        border-radius: 2px;
+        margin: 6px auto 0;
+      }
+
+      .sheet-title {
+        font-size: 16px;
+        font-weight: 700;
+      }
+
+      .sheet-close-btn {
+        background: none;
+        border: none;
+        font-size: 20px;
+        color: var(--text-muted);
+        cursor: pointer;
+        padding: 4px;
+      }
+
+      .sheet-content {
+        padding: 16px 20px;
+        overflow-y: auto;
+        flex: 1;
+      }
+
+      .sheet-footer {
+        padding: 12px 20px 20px;
+        border-top: 1px solid var(--border);
+        display: flex;
+        gap: 10px;
+        background: #f8fafc;
+      }
+
+      /* Result Details */
+      .score-summary-box {
+        background: linear-gradient(135deg, #eff6ff 0%, #ecfdf5 100%);
+        border: 1px solid #bfdbfe;
+        border-radius: 12px;
+        padding: 16px;
+        text-align: center;
+        margin-bottom: 16px;
+      }
+
+      .score-digits {
+        font-size: 38px;
+        font-weight: 800;
+        color: var(--primary-dark);
+        line-height: 1.1;
+      }
+
+      .score-percent-label {
+        font-size: 15px;
+        font-weight: 600;
+        color: var(--text-muted);
+        margin-top: 2px;
+      }
+
+      .progress-track {
+        width: 100%;
+        height: 10px;
+        background: #e2e8f0;
+        border-radius: 9999px;
+        overflow: hidden;
+        margin: 12px 0 6px;
+      }
+
+      .progress-fill {
+        height: 100%;
+        background: linear-gradient(90deg, #3b82f6, #16a34a);
+        border-radius: 9999px;
+        transition: width 0.3s ease;
+      }
+
+      /* Student Information Form in Result */
+      .student-form-grid {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 10px;
+        background: #f8fafc;
+        border: 1px solid var(--border);
+        border-radius: 10px;
+        padding: 12px;
+        margin-bottom: 16px;
+      }
+
+      .student-form-grid .full-span {
+        grid-column: span 2;
+      }
+
+      /* Result Item Table */
+      .item-table-container {
+        max-height: 250px;
+        overflow-y: auto;
+        border: 1px solid var(--border);
+        border-radius: 8px;
+      }
+
+      .item-table {
+        width: 100%;
+        border-collapse: collapse;
+        font-size: 13px;
+        text-align: left;
+      }
+
+      .item-table th {
+        background: #f1f5f9;
+        padding: 8px 12px;
+        font-weight: 700;
+        color: var(--text-muted);
+        position: sticky;
+        top: 0;
+        border-bottom: 1px solid var(--border);
+      }
+
+      .item-table td {
+        padding: 8px 12px;
+        border-bottom: 1px solid #f1f5f9;
+      }
+
+      .tag-correct {
+        color: var(--success);
+        font-weight: 700;
+      }
+
+      .tag-incorrect {
+        color: var(--danger);
+        font-weight: 700;
+      }
+
+      .tag-blank {
+        color: var(--text-muted);
+      }
+
+      /* =========================================================
+         TAB 4: RESULTS TABLE & STATS
+         ========================================================= */
+      .stats-grid {
+        display: grid;
+        grid-template-columns: repeat(3, 1fr);
+        gap: 10px;
+        margin-bottom: 16px;
+      }
+
+      .stat-card {
+        background: #ffffff;
+        border: 1px solid var(--border);
+        border-radius: 10px;
+        padding: 12px;
+        text-align: center;
+        box-shadow: var(--shadow-sm);
+      }
+
+      .stat-number {
+        font-size: 22px;
+        font-weight: 800;
+        color: var(--primary);
+        line-height: 1.2;
+      }
+
+      .stat-caption {
+        font-size: 11px;
+        color: var(--text-muted);
+        margin-top: 2px;
+      }
+
+      .results-table-wrap {
+        border: 1px solid var(--border);
+        border-radius: 8px;
+        overflow-x: auto;
+        background: #ffffff;
+      }
+
+      .results-table {
+        width: 100%;
+        border-collapse: collapse;
+        font-size: 13px;
+        min-width: 580px;
+      }
+
+      .results-table th {
+        background: #f8fafc;
+        padding: 10px 12px;
+        text-align: left;
+        font-weight: 700;
+        color: var(--text-muted);
+        border-bottom: 1px solid var(--border);
+      }
+
+      .results-table td {
+        padding: 10px 12px;
+        border-bottom: 1px solid #f1f5f9;
+      }
+
+      .results-table tr:hover {
+        background: #f8fafc;
+        cursor: pointer;
+      }
+
+      .empty-state-card {
+        text-align: center;
+        padding: 40px 16px;
+        color: var(--text-muted);
+      }
+
+      /* =========================================================
+         PRINTABLE A4 ANSWER SHEET DESIGN
+         ========================================================= */
+      #printableContainer {
+        background: #ffffff;
+        border: 1px solid var(--border);
+        border-radius: var(--radius);
+        padding: 20px;
+        margin-bottom: 20px;
+        box-shadow: var(--shadow-sm);
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+      }
+
+      .a4-paper {
+        width: 100%;
+        max-width: 720px;
+        background: #ffffff;
+        border: 2px solid #000000;
+        padding: 20px;
+        position: relative;
+        box-sizing: border-box;
+        color: #000000;
+      }
+
+      /* 4 Corner Registration Marks (Solid 20x20px black squares) */
+      .reg-corner {
+        position: absolute;
+        width: 20px;
+        height: 20px;
+        background: #000000;
+      }
+
+      .reg-tl { top: 8px; left: 8px; }
+      .reg-tr { top: 8px; right: 8px; }
+      .reg-bl { bottom: 8px; left: 8px; }
+      .reg-br { bottom: 8px; right: 8px; }
+
+      .a4-header {
+        text-align: center;
+        border-bottom: 2px solid #000000;
+        padding-bottom: 8px;
+        margin-bottom: 12px;
+      }
+
+      .a4-title {
+        font-size: 18px;
+        font-weight: 800;
+        letter-spacing: 0.5px;
+      }
+
+      .a4-subtitle {
+        font-size: 13px;
+        margin-top: 2px;
+      }
+
+      /* Student Header Information Box */
+      .a4-student-box {
+        display: grid;
+        grid-template-columns: 1.3fr 1.7fr;
+        gap: 12px;
+        border: 1.5px solid #000000;
+        padding: 10px;
+        margin-bottom: 10px;
+      }
+
+      .a4-line-row {
+        margin-bottom: 8px;
+        font-size: 13px;
+        display: flex;
+        align-items: center;
+      }
+
+      .a4-dot-line {
+        border-bottom: 1px dotted #000000;
+        flex: 1;
+        margin-left: 6px;
+        height: 16px;
+      }
+
+      /* 8-Digit ID Grid */
+      .a4-id-grid-wrap {
+        border-left: 1px solid #000000;
+        padding-left: 10px;
+      }
+
+      .a4-id-label {
+        font-size: 12px;
+        font-weight: 700;
+        text-align: center;
+        margin-bottom: 4px;
+      }
+
+      .a4-id-cols-flex {
+        display: flex;
+        justify-content: center;
+        gap: 5px;
+      }
+
+      .a4-id-col {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        gap: 2px;
+      }
+
+      .a4-id-box-write {
+        width: 17px;
+        height: 17px;
+        border: 1px solid #000000;
+        font-size: 10px;
+        text-align: center;
+        margin-bottom: 2px;
+      }
+
+      .a4-id-bubble {
+        width: 16px;
+        height: 16px;
+        border: 1px solid #000000;
+        border-radius: 50%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 9px;
+        font-weight: 700;
+      }
+
+      .a4-legend {
+        border: 1px solid #000000;
+        padding: 6px 10px;
+        font-size: 11px;
+        margin-bottom: 12px;
+        display: flex;
+        justify-content: space-between;
+      }
+
+      /* 2-Column Answer Sheet Grid */
+      .a4-answers-layout {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 16px;
+        border: 1.5px solid #000000;
+        padding: 10px;
+      }
+
+      .a4-col {
+        display: flex;
+        flex-direction: column;
+        gap: 4px;
+      }
+
+      .a4-q-row {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        padding: 2px 4px;
+        border-bottom: 1px solid #e5e7eb;
+      }
+
+      .a4-q-num {
+        font-size: 12px;
+        font-weight: 700;
+        width: 28px;
+      }
+
+      .a4-bubbles-group {
+        display: flex;
+        gap: 8px;
+      }
+
+      .a4-bubble {
+        width: 20px;
+        height: 20px;
+        border: 1.5px solid #000000;
+        border-radius: 50%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 11px;
+        font-weight: 700;
+        background: #ffffff;
+      }
+
+      /* Print Media */
+      @media print {
+        @page {
+          size: A4 portrait;
+          margin: 8mm;
+        }
+
+        body {
+          background: #ffffff !important;
+          color: #000000 !important;
+          padding: 0 !important;
+          margin: 0 !important;
+        }
+
+        .app-header,
+        .bottom-nav,
+        .toast-container,
+        .modal-backdrop,
+        .print-hide {
+          display: none !important;
+        }
+
+        .app-body {
+          padding-bottom: 0 !important;
+          max-width: 100% !important;
+          margin: 0 !important;
+        }
+
+        .tab-page {
+          display: none !important;
+        }
+
+        #tab-sheet {
+          display: block !important;
+          padding: 0 !important;
+        }
+
+        #printableContainer {
+          border: none !important;
+          box-shadow: none !important;
+          padding: 0 !important;
+          margin: 0 !important;
+        }
+
+        .a4-paper {
+          max-width: 100% !important;
+          border: 2px solid #000000 !important;
+          padding: 12mm 10mm !important;
+          page-break-inside: avoid;
+        }
+      }
+    </style>
+  </head>
+
+  <body>
+    <!-- App Header -->
+    <header class="app-header">
+      <div class="app-brand">
+        <div class="app-logo">🎯</div>
+        <div class="app-title-wrap">
+          <h1>ระบบตรวจข้อสอบ OMR</h1>
+          <p>ตรวจรอยดินสอด้วย Computer Vision ในเครื่อง 100%</p>
+        </div>
+      </div>
+      <div class="header-status-badge" id="headerStatusBadge" title="คลิกดูสถานะการสอบเทียบ">
+        <span class="status-indicator-dot" id="headerStatusDot"></span>
+        <span id="headerStatusText">ยังไม่สอบเทียบ</span>
+      </div>
+    </header>
+
+    <!-- Main Content Container -->
+    <main class="app-body">
+
+      <!-- ============================================
+           TAB 1: ตั้งค่า (SETTINGS)
+           ============================================ -->
+      <section class="tab-page" id="tab-settings">
+        <!-- Exam Questions Settings -->
+        <div class="card">
+          <h2 class="card-title">⚙️ ตั้งค่าข้อสอบและเฉลย</h2>
+          <p class="card-subtitle">เลือกจำนวนข้อและระบุเฉลย ก ข ค ง (บันทึกลงในเบราว์เซอร์อัตโนมัติ)</p>
+
+          <div class="form-group">
+            <label class="form-label" for="inputExamTitle">ชื่อวิชา / การสอบ</label>
+            <input type="text" id="inputExamTitle" class="input-text" value="การสอบวัดผลสัมฤทธิ์ทางการเรียน" />
+          </div>
+
+          <div class="form-group">
+            <label class="form-label">จำนวนข้อสอบ (10 / 20 / 30 / 40 ข้อ)</label>
+            <div class="radio-pills">
+              <div class="radio-pill-item">
+                <input type="radio" name="qCountRadio" id="qCount10" value="10" />
+                <label class="radio-pill-label" for="qCount10">10 ข้อ</label>
+              </div>
+              <div class="radio-pill-item">
+                <input type="radio" name="qCountRadio" id="qCount20" value="20" />
+                <label class="radio-pill-label" for="qCount20">20 ข้อ</label>
+              </div>
+              <div class="radio-pill-item">
+                <input type="radio" name="qCountRadio" id="qCount30" value="30" />
+                <label class="radio-pill-label" for="qCount30">30 ข้อ</label>
+              </div>
+              <div class="radio-pill-item">
+                <input type="radio" name="qCountRadio" id="qCount40" value="40" checked />
+                <label class="radio-pill-label" for="qCount40">40 ข้อ</label>
+              </div>
+            </div>
+          </div>
+
+          <!-- Answer Key Action Buttons -->
+          <div style="display: flex; gap: 8px; margin-bottom: 12px; flex-wrap: wrap;">
+            <button type="button" class="btn btn-secondary" id="btnRandomKey" style="font-size: 12px; padding: 6px 12px;">
+              🎲 สุ่มเฉลยตัวอย่าง
+            </button>
+            <button type="button" class="btn btn-secondary" id="btnClearKey" style="font-size: 12px; padding: 6px 12px;">
+              🧹 รีเซ็ตเฉลย
+            </button>
+          </div>
+
+          <!-- Answer Key Grid -->
+          <div class="form-group">
+            <label class="form-label">ตารางกรอกเฉลย (คลิกเลือกคำตอบที่ถูกต้อง)</label>
+            <div class="answer-key-grid" id="answerKeyGrid">
+              <!-- Rendered by JS -->
+            </div>
+          </div>
+
+          <div style="display: flex; justify-content: space-between; align-items: center; margin-top: 10px;">
+            <span style="font-size: 12px; color: var(--text-muted);" id="keySummaryText">กำหนดเฉลยแล้ว: 40/40 ข้อ</span>
+            <button type="button" class="btn btn-primary" id="btnSaveKey">
+              💾 บันทึกเฉลย
+            </button>
+          </div>
+        </div>
+
+        <!-- Computer Vision Calibration & Sensitivity -->
+        <div class="card">
+          <h2 class="card-title">🎯 การสอบเทียบและความไว (Computer Vision)</h2>
+          <p class="card-subtitle">ปรับแต่งค่าความมืดของรอยดินสอและการตรวจสอบตำแหน่ง</p>
+
+          <div class="form-group">
+            <div style="display: flex; justify-content: space-between; font-size: 13px; font-weight: 600; margin-bottom: 6px;">
+              <span>ระดับเกณฑ์ความมืดของรอยดินสอ (Threshold):</span>
+              <span id="thresholdValText" style="color: var(--primary);">50</span>
+            </div>
+            <input type="range" id="inputThreshold" min="25" max="90" value="50" step="5" style="width: 100%;" />
+            <p style="font-size: 11px; color: var(--text-muted); margin-top: 4px;">
+              * ค่ามาตรฐานคือ 50 (หากใช้ดินสอจางให้เลื่อนไปทางซ้าย หากตรวจพบรอยเลอะให้เลื่อนไปทางขวา)
+            </p>
+          </div>
+
+          <div class="form-group" style="display: flex; align-items: center; justify-content: space-between; padding: 10px; background: #f8fafc; border-radius: 8px; border: 1px solid var(--border);">
+            <div>
+              <div style="font-size: 13px; font-weight: 600;">โหมดแสดงจุดตรวจจับ (Debug Mode)</div>
+              <div style="font-size: 11px; color: var(--text-muted);">แสดงจุดสีตำแหน่งวงกลมที่กล้องกำลังตรวจสอบแบบเรียลไทม์</div>
+            </div>
+            <input type="checkbox" id="checkDebugOverlay" style="width: 18px; height: 18px; cursor: pointer;" checked />
+          </div>
+
+          <div style="display: flex; gap: 8px; flex-wrap: wrap;">
+            <button type="button" class="btn btn-secondary" id="btnResetCalibration" style="font-size: 12px;">
+              🔄 ล้างข้อมูลการสอบเทียบกระดาษเปล่า
+            </button>
+          </div>
+        </div>
+
+        <!-- GitHub Pages Guide Card -->
+        <div class="card">
+          <h2 class="card-title">🚀 นำไปใช้งานบน GitHub Pages</h2>
+          <p class="card-subtitle">ระบบนี้เป็นไฟล์ HTML เดี่ยว ทำงานบนเบราว์เซอร์ 100% ไม่มี backend สามารถนำขึ้น GitHub Pages ใช้งานฟรีได้ทันที</p>
+          <button type="button" class="btn btn-secondary btn-block" id="btnDownloadHtml">
+            📥 ดาวน์โหลดไฟล์ index.html สำหรับขึ้นเว็บส่วนตัว
+          </button>
+        </div>
+      </section>
+
+
+      <!-- ============================================
+           TAB 2: กระดาษคำตอบ (PRINTABLE SHEET)
+           ============================================ -->
+      <section class="tab-page" id="tab-sheet">
+        <div class="card print-hide">
+          <h2 class="card-title">📄 สร้างและพิมพ์กระดาษคำตอบ A4</h2>
+          <p class="card-subtitle">กระดาษคำตอบแบบสเกลแม่นยำ พร้อม Registration Marks 4 มุมสำหรับตรวจจับและปรับมุมมอง (Perspective Correction)</p>
+          
+          <div style="display: flex; gap: 10px; flex-wrap: wrap; margin-top: 8px;">
+            <button type="button" class="btn btn-primary" id="btnPrintSheet">
+              🖨️ พิมพ์กระดาษคำตอบ (Print A4)
+            </button>
+            <button type="button" class="btn btn-secondary" id="btnRefreshSheet">
+              🔄 สร้างกระดาษคำตอบใหม่
+            </button>
+          </div>
+        </div>
+
+        <!-- Printable Paper Area -->
+        <div id="printableContainer">
+          <div class="a4-paper" id="a4Paper">
+            <!-- 4 Corner Registration Marks -->
+            <div class="reg-corner reg-tl"></div>
+            <div class="reg-corner reg-tr"></div>
+            <div class="reg-corner reg-bl"></div>
+            <div class="reg-corner reg-br"></div>
+
+            <!-- Title -->
+            <div class="a4-header">
+              <div class="a4-title">กระดาษคำตอบแบบปรนัย (OMR Bubble Sheet)</div>
+              <div class="a4-subtitle" id="sheetExamSubtitle">วิชา: การสอบวัดผลสัมฤทธิ์ทางการเรียน</div>
+            </div>
+
+            <!-- Student Info & ID Bubble Grid -->
+            <div class="a4-student-box">
+              <div>
+                <div class="a4-line-row">
+                  <span>ชื่อ-สกุล:</span>
+                  <div class="a4-dot-line"></div>
+                </div>
+                <div class="a4-line-row">
+                  <span>ชั้น/ห้อง:</span>
+                  <div class="a4-dot-line" style="max-width: 90px;"></div>
+                  <span style="margin-left: 10px;">เลขที่:</span>
+                  <div class="a4-dot-line" style="max-width: 50px;"></div>
+                </div>
+                <div style="font-size: 11px; color: #333; margin-top: 4px;">
+                  * ฝนเลขประจำตัวในตารางด้านขวาให้ครบทุกหลัก
+                </div>
+              </div>
+
+              <!-- 8-Digit ID Bubble Grid -->
+              <div class="a4-id-grid-wrap">
+                <div class="a4-id-label">เลขประจำตัวนักเรียน (8 หลัก)</div>
+                <div class="a4-id-cols-flex" id="sheetIdColsContainer">
+                  <!-- Rendered by JS -->
+                </div>
+              </div>
+            </div>
+
+            <!-- Instructions -->
+            <div class="a4-legend">
+              <span><strong>คำชี้แจง:</strong> ใช้ดินสอ 2B หรือปากกาดำ/น้ำเงิน ระบายในวงกลมให้เต็มวง</span>
+              <span>ตัวอย่างที่ถูกต้อง: <strong>●</strong> | ผิด: <strong>✕</strong> / <strong>✔</strong></span>
+            </div>
+
+            <!-- Answer Bubbles (2 columns) -->
+            <div class="a4-answers-layout" id="sheetAnswersContainer">
+              <!-- Rendered by JS -->
+            </div>
+          </div>
+        </div>
+      </section>
+
+
+      <!-- ============================================
+           TAB 3: สแกน (CAMERA SCAN - MAIN TAB)
+           ============================================ -->
+      <section class="tab-page" id="tab-scan">
+        <div class="camera-viewport">
+          <!-- Live Camera Stream -->
+          <video id="cameraVideo" autoplay playsinline muted></video>
+
+          <!-- Overlay Canvas for Live Bubble Dots & Viewfinder -->
+          <canvas id="overlayCanvas"></canvas>
+
+          <!-- Camera UI -->
+          <div class="camera-overlay-ui">
+            <!-- Status Pill -->
+            <div class="camera-status-strip" id="cameraStatusPill">
+              <span class="status-indicator-dot" id="cameraStatusDot"></span>
+              <span id="cameraStatusText">🔴 ยังไม่สอบเทียบกระดาษเปล่า</span>
+            </div>
+
+            <!-- Viewfinder Guide Frame -->
+            <div class="viewfinder-frame" id="viewfinderFrame">
+              <div class="corner-mark corner-tl"></div>
+              <div class="corner-mark corner-tr"></div>
+              <div class="corner-mark corner-bl"></div>
+              <div class="corner-mark corner-br"></div>
+            </div>
+
+            <!-- Bottom Actions -->
+            <div class="camera-bottom-bar">
+              <div class="main-action-buttons">
+                <!-- 1. Calibrate Button -->
+                <button type="button" class="btn-calibrate-shutter" id="btnCalibrateShutter" title="วางกระดาษเปล่าเพื่อสอบเทียบ">
+                  🎯 สอบเทียบ
+                </button>
+
+                <!-- 2. Main Scan Button -->
+                <button type="button" class="btn-scan-shutter" id="btnScanShutter" title="สแกนและตรวจกระดาษคำตอบ">
+                  📷 สแกน
+                </button>
+              </div>
+
+              <!-- Aux Tools -->
+              <div class="camera-aux-tools">
+                <button type="button" class="btn-tool-pill" id="btnToggleCameraFacing">
+                  🔄 สลับกล้อง
+                </button>
+                <button type="button" class="btn-tool-pill" id="btnToggleTorch">
+                  ⚡ ไฟฉาย
+                </button>
+                <label class="btn-tool-pill" for="fileInputUpload" style="cursor: pointer;">
+                  📁 อัปโหลดรูป
+                </label>
+                <input type="file" id="fileInputUpload" accept="image/*" style="display: none;" />
+
+                <button type="button" class="btn-tool-pill" id="btnMockSampleSheet">
+                  🧪 ทดสอบภาพตัวอย่าง
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+
+      <!-- ============================================
+           TAB 4: ผลสอบ (RESULTS & CSV)
+           ============================================ -->
+      <section class="tab-page" id="tab-results">
+        <!-- Overview Stats -->
+        <div class="stats-grid">
+          <div class="stat-card">
+            <div class="stat-number" id="statCountStudents">0</div>
+            <div class="stat-caption">ตรวจแล้ว (คน)</div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-number" id="statAverageScore">0.0</div>
+            <div class="stat-caption">คะแนนเฉลี่ย</div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-number" id="statPassPercentage">0%</div>
+            <div class="stat-caption">ผ่านเกณฑ์ (≥50%)</div>
+          </div>
+        </div>
+
+        <!-- Action Bar -->
+        <div class="card" style="padding: 12px; margin-bottom: 14px; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 8px;">
+          <div>
+            <h3 style="font-size: 15px; font-weight: 700;">รายชื่อนักเรียนที่ตรวจแล้ว</h3>
+            <p style="font-size: 12px; color: var(--text-muted);">คลิกที่แถวเพื่อดูรายละเอียดและผลการตรวจรายข้อ</p>
+          </div>
+          <div style="display: flex; gap: 8px;">
+            <button type="button" class="btn btn-primary" id="btnDownloadCsv" style="font-size: 13px; padding: 8px 14px;">
+              ⬇️ ดาวน์โหลด CSV
+            </button>
+            <button type="button" class="btn btn-danger-outline" id="btnClearResults" style="font-size: 13px; padding: 8px 14px;">
+              🗑️ ล้างข้อมูล
+            </button>
+          </div>
+        </div>
+
+        <!-- Results Table -->
+        <div class="results-table-wrap">
+          <table class="results-table" id="resultsTable">
+            <thead>
+              <tr>
+                <th>เลขที่</th>
+                <th>เลขประจำตัว</th>
+                <th>ชื่อ-สกุล</th>
+                <th>ชั้น/ห้อง</th>
+                <th>คะแนน</th>
+                <th>ร้อยละ</th>
+                <th>วันเวลา</th>
+              </tr>
+            </thead>
+            <tbody id="resultsTableBody">
+              <!-- Populated by JS -->
+            </tbody>
+          </table>
+          <div class="empty-state-card" id="resultsEmptyCard">
+            <div style="font-size: 40px; margin-bottom: 8px; opacity: 0.7;">📋</div>
+            <p>ยังไม่มีข้อมูลผลการตรวจข้อสอบ</p>
+            <p style="font-size: 12px; margin-top: 4px;">ไปที่แท็บ "สแกน" เพื่อเริ่มตรวจกระดาษคำตอบ</p>
+          </div>
+        </div>
+      </section>
+
+    </main>
+
+    <!-- Bottom Navigation Bar (4 Mobile-First Tabs) -->
+    <nav class="bottom-nav">
+      <button type="button" class="nav-tab-btn" data-tab="tab-settings" id="navTabSettings">
+        <span class="nav-icon">⚙️</span>
+        <span>ตั้งค่า</span>
+      </button>
+      <button type="button" class="nav-tab-btn" data-tab="tab-sheet" id="navTabSheet">
+        <span class="nav-icon">📄</span>
+        <span>กระดาษ</span>
+      </button>
+      <button type="button" class="nav-tab-btn active" data-tab="tab-scan" id="navTabScan">
+        <span class="nav-icon">📷</span>
+        <span>สแกน</span>
+      </button>
+      <button type="button" class="nav-tab-btn" data-tab="tab-results" id="navTabResults">
+        <span class="nav-icon">📊</span>
+        <span>ผลสอบ</span>
+      </button>
+    </nav>
+
+    <!-- Toast Notifications Container -->
+    <div class="toast-container" id="toastContainer"></div>
+
+    <!-- Post-Scan Result Bottom Sheet Modal -->
+    <div class="modal-backdrop" id="resultModal">
+      <div class="bottom-sheet">
+        <div class="sheet-drag-pill"></div>
+        <div class="sheet-header">
+          <div class="sheet-title">📊 ผลการตรวจข้อสอบ</div>
+          <button type="button" class="sheet-close-btn" id="btnCloseModal">✕</button>
+        </div>
+
+        <div class="sheet-content">
+          <!-- Score Banner -->
+          <div class="score-summary-box">
+            <div class="score-digits" id="modalScoreVal">0 / 0</div>
+            <div class="score-percent-label" id="modalPercentVal">คิดเป็น 0.0%</div>
+            <div class="progress-track">
+              <div class="progress-fill" id="modalProgressFill" style="width: 0%;"></div>
+            </div>
+            <div id="modalEvaluationTag" style="margin-top: 6px;"></div>
+          </div>
+
+          <!-- Student Information (Editable Form) -->
+          <div class="student-form-grid">
+            <div class="full-span">
+              <label class="form-label" for="inputModalStudentName">ชื่อ-สกุลนักเรียน</label>
+              <input type="text" id="inputModalStudentName" class="input-text" placeholder="กรอกชื่อ-สกุลนักเรียน" />
+            </div>
+            <div>
+              <label class="form-label" for="inputModalClassRoom">ชั้น / ห้อง</label>
+              <input type="text" id="inputModalClassRoom" class="input-text" value="ม.3/1" />
+            </div>
+            <div>
+              <label class="form-label" for="inputModalStudentNum">เลขที่</label>
+              <input type="text" id="inputModalStudentNum" class="input-text" value="1" />
+            </div>
+            <div class="full-span">
+              <label class="form-label" for="inputModalStudentID">
+                เลขประจำตัว (อ่านจากตารางฝนอัตโนมัติ)
+              </label>
+              <input type="text" id="inputModalStudentID" class="input-text" placeholder="เช่น 66014528" />
+            </div>
+          </div>
+
+          <!-- Item-by-item Table -->
+          <h4 style="font-size: 14px; font-weight: 700; margin-bottom: 8px;">รายละเอียดรายข้อ</h4>
+          <div class="item-table-container">
+            <table class="item-table">
+              <thead>
+                <tr>
+                  <th style="width: 50px;">ข้อที่</th>
+                  <th>คำตอบที่ตรวจได้</th>
+                  <th>เฉลย</th>
+                  <th style="width: 80px;">ผลการตรวจ</th>
+                </tr>
+              </thead>
+              <tbody id="modalItemTableBody">
+                <!-- Items populated by JS -->
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+        <div class="sheet-footer">
+          <button type="button" class="btn btn-secondary" style="flex: 1;" id="btnModalRescan">
+            🔄 สแกนใหม่
+          </button>
+          <button type="button" class="btn btn-primary" style="flex: 1.4;" id="btnModalSave">
+            ✅ บันทึกผลสอบ
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Hidden Internal Canvases for Processing -->
+    <canvas id="processingCanvas" style="display: none;"></canvas>
+    <canvas id="warpedCanvas" style="display: none;"></canvas>
+
+    <!-- =========================================================
+         EMBEDDED COMPUTER VISION JAVASCRIPT
+         ========================================================= -->
+    <script>
+      /**
+       * OMR EXAM GRADING SYSTEM (Computer Vision Edition)
+       * In-browser pixel darkness & color detection using Canvas API
+       * Perspective correction via corner registration marks
+       */
+
+      const STORAGE_KEYS = {
+        EXAM_TITLE: 'omr_cv_exam_title',
+        QUESTION_COUNT: 'omr_cv_question_count',
+        ANSWER_KEY: 'omr_cv_answer_key',
+        CALIBRATION: 'omr_cv_calibration',
+        THRESHOLD: 'omr_cv_threshold',
+        DEBUG_OVERLAY: 'omr_cv_debug',
+        RESULTS: 'omr_cv_results'
+      };
+
+      const CHOICES = ['ก', 'ข', 'ค', 'ง'];
+
+      // Canonical Normalized Canvas Coordinates (Standard A4: 1000 x 1414)
+      const CANVAS_WIDTH = 1000;
+      const CANVAS_HEIGHT = 1414;
+
+      // 4 Registration Mark Centers in canonical space
+      const CANONICAL_CORNERS = {
+        tl: { x: 60, y: 60 },
+        tr: { x: 940, y: 60 },
+        bl: { x: 60, y: 1354 },
+        br: { x: 940, y: 1354 }
+      };
+
+      // --- APPLICATION STATE ---
+      let appState = {
+        examTitle: localStorage.getItem(STORAGE_KEYS.EXAM_TITLE) || 'การสอบวัดผลสัมฤทธิ์ทางการเรียน',
+        questionCount: parseInt(localStorage.getItem(STORAGE_KEYS.QUESTION_COUNT) || '40', 10),
+        answerKey: {}, // { 1: "ก", 2: "ข", ... }
+        calibrationData: null, // baseline darkness for each bubble
+        threshold: parseInt(localStorage.getItem(STORAGE_KEYS.THRESHOLD) || '50', 10),
+        showDebug: localStorage.getItem(STORAGE_KEYS.DEBUG_OVERLAY) !== 'false',
+        results: [],
+        activeTab: 'tab-scan',
+        videoStream: null,
+        facingMode: 'environment',
+        torchEnabled: false,
+        pendingResult: null,
+        animFrameId: null
+      };
+
+      // Load saved answer key
+      try {
+        const savedKeys = localStorage.getItem(STORAGE_KEYS.ANSWER_KEY);
+        if (savedKeys) {
+          appState.answerKey = JSON.parse(savedKeys);
+        } else {
+          for (let i = 1; i <= appState.questionCount; i++) {
+            appState.answerKey[i] = CHOICES[(i - 1) % 4];
+          }
+          localStorage.setItem(STORAGE_KEYS.ANSWER_KEY, JSON.stringify(appState.answerKey));
+        }
+      } catch (e) {
+        appState.answerKey = {};
+      }
+
+      // Load calibration
+      try {
+        const savedCalib = localStorage.getItem(STORAGE_KEYS.CALIBRATION);
+        if (savedCalib) {
+          appState.calibrationData = JSON.parse(savedCalib);
+        }
+      } catch (e) {
+        appState.calibrationData = null;
+      }
+
+      // Load results history
+      try {
+        const savedResults = localStorage.getItem(STORAGE_KEYS.RESULTS);
+        if (savedResults) {
+          appState.results = JSON.parse(savedResults);
+        }
+      } catch (e) {
+        appState.results = [];
+      }
+
+      // --- DOM REFERENCES ---
+      const dom = {
+        headerStatusBadge: document.getElementById('headerStatusBadge'),
+        headerStatusDot: document.getElementById('headerStatusDot'),
+        headerStatusText: document.getElementById('headerStatusText'),
+        inputExamTitle: document.getElementById('inputExamTitle'),
+        qCountRadios: document.querySelectorAll('input[name="qCountRadio"]'),
+        btnRandomKey: document.getElementById('btnRandomKey'),
+        btnClearKey: document.getElementById('btnClearKey'),
+        answerKeyGrid: document.getElementById('answerKeyGrid'),
+        keySummaryText: document.getElementById('keySummaryText'),
+        btnSaveKey: document.getElementById('btnSaveKey'),
+        inputThreshold: document.getElementById('inputThreshold'),
+        thresholdValText: document.getElementById('thresholdValText'),
+        checkDebugOverlay: document.getElementById('checkDebugOverlay'),
+        btnResetCalibration: document.getElementById('btnResetCalibration'),
+        btnDownloadHtml: document.getElementById('btnDownloadHtml'),
+        // Sheet tab
+        btnPrintSheet: document.getElementById('btnPrintSheet'),
+        btnRefreshSheet: document.getElementById('btnRefreshSheet'),
+        sheetExamSubtitle: document.getElementById('sheetExamSubtitle'),
+        sheetIdColsContainer: document.getElementById('sheetIdColsContainer'),
+        sheetAnswersContainer: document.getElementById('sheetAnswersContainer'),
+        // Camera Scan tab
+        cameraVideo: document.getElementById('cameraVideo'),
+        overlayCanvas: document.getElementById('overlayCanvas'),
+        cameraStatusPill: document.getElementById('cameraStatusPill'),
+        cameraStatusDot: document.getElementById('cameraStatusDot'),
+        cameraStatusText: document.getElementById('cameraStatusText'),
+        btnCalibrateShutter: document.getElementById('btnCalibrateShutter'),
+        btnScanShutter: document.getElementById('btnScanShutter'),
+        btnToggleCameraFacing: document.getElementById('btnToggleCameraFacing'),
+        btnToggleTorch: document.getElementById('btnToggleTorch'),
+        fileInputUpload: document.getElementById('fileInputUpload'),
+        btnMockSampleSheet: document.getElementById('btnMockSampleSheet'),
+        // Results tab
+        statCountStudents: document.getElementById('statCountStudents'),
+        statAverageScore: document.getElementById('statAverageScore'),
+        statPassPercentage: document.getElementById('statPassPercentage'),
+        btnDownloadCsv: document.getElementById('btnDownloadCsv'),
+        btnClearResults: document.getElementById('btnClearResults'),
+        resultsTable: document.getElementById('resultsTable'),
+        resultsTableBody: document.getElementById('resultsTableBody'),
+        resultsEmptyCard: document.getElementById('resultsEmptyCard'),
+        // Result Modal
+        resultModal: document.getElementById('resultModal'),
+        btnCloseModal: document.getElementById('btnCloseModal'),
+        btnModalRescan: document.getElementById('btnModalRescan'),
+        btnModalSave: document.getElementById('btnModalSave'),
+        modalScoreVal: document.getElementById('modalScoreVal'),
+        modalPercentVal: document.getElementById('modalPercentVal'),
+        modalProgressFill: document.getElementById('modalProgressFill'),
+        modalEvaluationTag: document.getElementById('modalEvaluationTag'),
+        inputModalStudentName: document.getElementById('inputModalStudentName'),
+        inputModalClassRoom: document.getElementById('inputModalClassRoom'),
+        inputModalStudentNum: document.getElementById('inputModalStudentNum'),
+        inputModalStudentID: document.getElementById('inputModalStudentID'),
+        modalItemTableBody: document.getElementById('modalItemTableBody'),
+        toastContainer: document.getElementById('toastContainer'),
+        processingCanvas: document.getElementById('processingCanvas'),
+        warpedCanvas: document.getElementById('warpedCanvas')
+      };
+
+      // --- TOAST NOTIFICATION ---
+      function notify(msg, type = 'info') {
+        const toast = document.createElement('div');
+        toast.className = `toast ${type}`;
+        let icon = 'ℹ️';
+        if (type === 'success') icon = '✅';
+        if (type === 'error') icon = '⚠️';
+        if (type === 'warning') icon = '🔔';
+        toast.innerHTML = `<span>${icon}</span><span>${msg}</span>`;
+        dom.toastContainer.appendChild(toast);
+        setTimeout(() => {
+          toast.style.transition = 'opacity 0.3s ease, transform 0.3s ease';
+          toast.style.opacity = '0';
+          toast.style.transform = 'translateY(-8px)';
+          setTimeout(() => toast.remove(), 300);
+        }, 3200);
+      }
+
+      // --- COORDINATE MAPPING GENERATOR ---
+      /**
+       * Returns normalized canonical (x, y) coordinates for question bubble
+       * @param {number} q Question number (1..40)
+       * @param {number} c Choice index (0:ก, 1:ข, 2:ค, 3:ง)
+       */
+      function getQuestionBubbleCoords(q, c) {
+        const isCol2 = q > 20;
+        const rowIdx = isCol2 ? (q - 21) : (q - 1);
+        const y = 490 + (rowIdx * 39);
+        const baseX = isCol2 ? 640 : 160;
+        const x = baseX + (c * 52);
+        return { x, y };
+      }
+
+      /**
+       * Returns normalized canonical (x, y) coordinates for student ID bubble
+       * @param {number} col Column (0..7)
+       * @param {number} digit Digit (0..9)
+       */
+      function getStudentIdBubbleCoords(col, digit) {
+        const x = 540 + (col * 46);
+        const y = 195 + (digit * 22);
+        return { x, y };
+      }
+
+      // --- TAB SWITCHING ---
+      function navigateTab(tabId) {
+        appState.activeTab = tabId;
+
+        document.querySelectorAll('.nav-tab-btn').forEach(btn => {
+          if (btn.getAttribute('data-tab') === tabId) {
+            btn.classList.add('active');
+          } else {
+            btn.classList.remove('active');
+          }
+        });
+
+        document.querySelectorAll('.tab-page').forEach(page => {
+          if (page.id === tabId) {
+            page.classList.add('active');
+          } else {
+            page.classList.remove('active');
+          }
+        });
+
+        if (tabId === 'tab-scan') {
+          startCamera();
+        } else {
+          stopCamera();
+        }
+
+        if (tabId === 'tab-sheet') {
+          renderPrintableSheet();
+        } else if (tabId === 'tab-results') {
+          renderResultsTable();
+        }
+      }
+
+      document.querySelectorAll('.nav-tab-btn').forEach(btn => {
+        btn.addEventListener('click', () => {
+          navigateTab(btn.getAttribute('data-tab'));
+        });
+      });
+
+      dom.headerStatusBadge.addEventListener('click', () => {
+        navigateTab('tab-settings');
+      });
+
+      // --- CALIBRATION STATUS UI UPDATE ---
+      function updateCalibrationIndicators() {
+        const isCalibrated = appState.calibrationData && appState.calibrationData.calibrated;
+        if (isCalibrated) {
+          dom.headerStatusDot.classList.add('ready');
+          dom.headerStatusText.textContent = 'พร้อมสแกน (สอบเทียบแล้ว)';
+          dom.cameraStatusDot.classList.add('ready');
+          dom.cameraStatusText.textContent = '🟢 พร้อมสแกน (สอบเทียบแล้ว)';
+        } else {
+          dom.headerStatusDot.classList.remove('ready');
+          dom.headerStatusText.textContent = 'ยังไม่สอบเทียบ';
+          dom.cameraStatusDot.classList.remove('ready');
+          dom.cameraStatusText.textContent = '🔴 ยังไม่สอบเทียบ (ใช้ค่ามาตรฐาน)';
+        }
+      }
+
+      // --- SETTINGS CONTROLS ---
+      dom.qCountRadios.forEach(radio => {
+        if (parseInt(radio.value, 10) === appState.questionCount) {
+          radio.checked = true;
+        }
+        radio.addEventListener('change', (e) => {
+          const count = parseInt(e.target.value, 10);
+          appState.questionCount = count;
+          localStorage.setItem(STORAGE_KEYS.QUESTION_COUNT, count.toString());
+
+          // Ensure keys exist
+          for (let i = 1; i <= count; i++) {
+            if (!appState.answerKey[i]) {
+              appState.answerKey[i] = CHOICES[(i - 1) % 4];
+            }
+          }
+          renderAnswerKeyGrid();
+          renderPrintableSheet();
+          notify(`ปรับจำนวนข้อสอบเป็น ${count} ข้อแล้ว`, 'info');
+        });
+      });
+
+      dom.inputThreshold.value = appState.threshold;
+      dom.thresholdValText.textContent = appState.threshold;
+      dom.inputThreshold.addEventListener('input', (e) => {
+        const val = parseInt(e.target.value, 10);
+        appState.threshold = val;
+        dom.thresholdValText.textContent = val;
+        localStorage.setItem(STORAGE_KEYS.THRESHOLD, val.toString());
+      });
+
+      dom.checkDebugOverlay.checked = appState.showDebug;
+      dom.checkDebugOverlay.addEventListener('change', (e) => {
+        appState.showDebug = e.target.checked;
+        localStorage.setItem(STORAGE_KEYS.DEBUG_OVERLAY, e.target.checked ? 'true' : 'false');
+      });
+
+      dom.btnResetCalibration.addEventListener('click', () => {
+        appState.calibrationData = null;
+        localStorage.removeItem(STORAGE_KEYS.CALIBRATION);
+        updateCalibrationIndicators();
+        notify('ล้างข้อมูลการสอบเทียบกระดาษเปล่าแล้ว (ใช้เกณฑ์มาตรฐาน)', 'info');
+      });
+
+      dom.btnDownloadHtml.addEventListener('click', () => {
+        const fullHtml = document.documentElement.outerHTML;
+        const blob = new Blob([fullHtml], { type: 'text/html;charset=utf-8' });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = 'omr_grading_system.html';
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        URL.revokeObjectURL(url);
+        notify('ดาวน์โหลดไฟล์ omr_grading_system.html เรียบร้อยแล้ว', 'success');
+      });
+
+      // --- ANSWER KEY GRID ---
+      function renderAnswerKeyGrid() {
+        dom.answerKeyGrid.innerHTML = '';
+        let filledCount = 0;
+
+        for (let i = 1; i <= appState.questionCount; i++) {
+          const row = document.createElement('div');
+          row.className = 'answer-key-row';
+
+          const currentChoice = appState.answerKey[i] || null;
+          if (currentChoice) filledCount++;
+
+          const qLabel = document.createElement('div');
+          qLabel.className = 'answer-key-qnum';
+          qLabel.textContent = `ข้อที่ ${i}`;
+          row.appendChild(qLabel);
+
+          const group = document.createElement('div');
+          group.className = 'choice-selector-group';
+
+          CHOICES.forEach(ch => {
+            const btn = document.createElement('button');
+            btn.type = 'button';
+            btn.className = `choice-btn ${currentChoice === ch ? 'selected' : ''}`;
+            btn.textContent = ch;
+            btn.addEventListener('click', () => {
+              appState.answerKey[i] = ch;
+              renderAnswerKeyGrid();
+            });
+            group.appendChild(btn);
+          });
+
+          row.appendChild(group);
+          dom.answerKeyGrid.appendChild(row);
+        }
+
+        dom.keySummaryText.textContent = `กำหนดเฉลยแล้ว: ${filledCount}/${appState.questionCount} ข้อ`;
+      }
+
+      dom.btnRandomKey.addEventListener('click', () => {
+        for (let i = 1; i <= appState.questionCount; i++) {
+          appState.answerKey[i] = CHOICES[Math.floor(Math.random() * 4)];
+        }
+        renderAnswerKeyGrid();
+        notify('สุ่มเฉลยตัวอย่างเรียบร้อย', 'info');
+      });
+
+      dom.btnClearKey.addEventListener('click', () => {
+        appState.answerKey = {};
+        renderAnswerKeyGrid();
+        notify('รีเซ็ตเฉลยทั้งหมดแล้ว', 'info');
+      });
+
+      dom.btnSaveKey.addEventListener('click', () => {
+        appState.examTitle = dom.inputExamTitle.value.trim() || 'การสอบวัดผลสัมฤทธิ์ทางการเรียน';
+        localStorage.setItem(STORAGE_KEYS.EXAM_TITLE, appState.examTitle);
+        localStorage.setItem(STORAGE_KEYS.ANSWER_KEY, JSON.stringify(appState.answerKey));
+        notify('บันทึกเฉลยข้อสอบเรียบร้อยแล้ว', 'success');
+      });
+
+      // --- PRINTABLE SHEET GENERATION (A4) ---
+      function renderPrintableSheet() {
+        dom.sheetExamSubtitle.textContent = `วิชา: ${appState.examTitle || 'การสอบวัดผลสัมฤทธิ์ทางการเรียน'}`;
+
+        // 8-Digit ID Grid
+        dom.sheetIdColsContainer.innerHTML = '';
+        for (let c = 0; c < 8; c++) {
+          const col = document.createElement('div');
+          col.className = 'a4-id-col';
+
+          const writeBox = document.createElement('div');
+          writeBox.className = 'a4-id-box-write';
+          col.appendChild(writeBox);
+
+          for (let d = 0; d <= 9; d++) {
+            const bubble = document.createElement('div');
+            bubble.className = 'a4-id-bubble';
+            bubble.textContent = d;
+            col.appendChild(bubble);
+          }
+          dom.sheetIdColsContainer.appendChild(col);
+        }
+
+        // 2-Column Answer Sheet
+        dom.sheetAnswersContainer.innerHTML = '';
+        const half = Math.ceil(appState.questionCount / 2);
+
+        // Column 1
+        const col1 = document.createElement('div');
+        col1.className = 'a4-col';
+        for (let i = 1; i <= half; i++) {
+          col1.appendChild(createA4QuestionRow(i));
+        }
+
+        // Column 2
+        const col2 = document.createElement('div');
+        col2.className = 'a4-col';
+        for (let i = half + 1; i <= appState.questionCount; i++) {
+          col2.appendChild(createA4QuestionRow(i));
+        }
+
+        dom.sheetAnswersContainer.appendChild(col1);
+        dom.sheetAnswersContainer.appendChild(col2);
+      }
+
+      function createA4QuestionRow(qNum) {
+        const row = document.createElement('div');
+        row.className = 'a4-q-row';
+
+        const num = document.createElement('div');
+        num.className = 'a4-q-num';
+        num.textContent = `${String(qNum).padStart(2, '0')}.`;
+        row.appendChild(num);
+
+        const bubbles = document.createElement('div');
+        bubbles.className = 'a4-bubbles-group';
+        CHOICES.forEach(ch => {
+          const b = document.createElement('div');
+          b.className = 'a4-bubble';
+          b.textContent = ch;
+          bubbles.appendChild(b);
+        });
+        row.appendChild(bubbles);
+
+        return row;
+      }
+
+      dom.btnPrintSheet.addEventListener('click', () => {
+        window.print();
+      });
+
+      dom.btnRefreshSheet.addEventListener('click', () => {
+        renderPrintableSheet();
+        notify('สร้างกระดาษคำตอบใหม่เรียบร้อย', 'info');
+      });
+
+      // --- MOBILE CAMERA ENGINE & LIVE OVERLAY ---
+      async function startCamera() {
+        if (appState.videoStream) return;
+
+        try {
+          const stream = await navigator.mediaDevices.getUserMedia({
+            video: {
+              facingMode: { ideal: appState.facingMode },
+              width: { ideal: 1920 },
+              height: { ideal: 1080 }
+            },
+            audio: false
+          });
+
+          appState.videoStream = stream;
+          dom.cameraVideo.srcObject = stream;
+          await dom.cameraVideo.play();
+          startLiveOverlayLoop();
+        } catch (err) {
+          console.warn('Camera access issue:', err);
+          notify('ไม่สามารถเข้าถึงกล้องได้ กรุณาอนุญาตการใช้กล้อง หรือใช้อัปโหลดรูปภาพ', 'error');
+        }
+      }
+
+      function stopCamera() {
+        if (appState.videoStream) {
+          appState.videoStream.getTracks().forEach(t => t.stop());
+          appState.videoStream = null;
+          dom.cameraVideo.srcObject = null;
+        }
+        if (appState.animFrameId) {
+          cancelAnimationFrame(appState.animFrameId);
+          appState.animFrameId = null;
+        }
+      }
+
+      dom.btnToggleCameraFacing.addEventListener('click', async () => {
+        appState.facingMode = appState.facingMode === 'environment' ? 'user' : 'environment';
+        stopCamera();
+        await startCamera();
+        notify(`สลับไปใช้กล้อง ${appState.facingMode === 'environment' ? 'หลัง' : 'หน้า'}`, 'info');
+      });
+
+      dom.btnToggleTorch.addEventListener('click', async () => {
+        if (!appState.videoStream) return;
+        const track = appState.videoStream.getVideoTracks()[0];
+        if (!track) return;
+        const caps = track.getCapabilities ? track.getCapabilities() : {};
+        if (!caps.torch) {
+          notify('อุปกรณ์นี้ไม่รองรับการเปิดไฟแฟลช', 'info');
+          return;
+        }
+        try {
+          appState.torchEnabled = !appState.torchEnabled;
+          await track.applyConstraints({ advanced: [{ torch: appState.torchEnabled }] });
+          notify(appState.torchEnabled ? 'เปิดไฟแฟลชแล้ว' : 'ปิดไฟแฟลชแล้ว', 'info');
+        } catch (e) {
+          notify('ไม่สามารถเปิดไฟแฟลชได้', 'error');
+        }
+      });
+
+      // Live Viewfinder & Debug Bubble Points Overlay
+      function startLiveOverlayLoop() {
+        function drawFrame() {
+          if (!appState.videoStream || appState.activeTab !== 'tab-scan') return;
+
+          const canvas = dom.overlayCanvas;
+          const rect = canvas.getBoundingClientRect();
+          if (canvas.width !== rect.width || canvas.height !== rect.height) {
+            canvas.width = rect.width;
+            canvas.height = rect.height;
+          }
+
+          const ctx = canvas.getContext('2d');
+          ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+          // Get Viewfinder Frame dimensions on screen
+          const vf = document.getElementById('viewfinderFrame');
+          if (vf && appState.showDebug) {
+            const vfRect = vf.getBoundingClientRect();
+            const canvasRect = canvas.getBoundingClientRect();
+
+            const left = vfRect.left - canvasRect.left;
+            const top = vfRect.top - canvasRect.top;
+            const width = vfRect.width;
+            const height = vfRect.height;
+
+            // Draw small debug target dots inside the viewfinder space
+            ctx.fillStyle = 'rgba(56, 189, 248, 0.6)';
+            for (let q = 1; q <= appState.questionCount; q++) {
+              for (let c = 0; c < 4; c++) {
+                const norm = getQuestionBubbleCoords(q, c);
+                // Map canonical (0..1000, 0..1414) to viewfinder on screen
+                const dotX = left + (norm.x / CANVAS_WIDTH) * width;
+                const dotY = top + (norm.y / CANVAS_HEIGHT) * height;
+
+                ctx.beginPath();
+                ctx.arc(dotX, dotY, 2.5, 0, Math.PI * 2);
+                ctx.fill();
+              }
+            }
+          }
+
+          appState.animFrameId = requestAnimationFrame(drawFrame);
+        }
+        appState.animFrameId = requestAnimationFrame(drawFrame);
+      }
+
+      // =========================================================
+      // COMPUTER VISION: PERSPECTIVE WARP & REGISTRATION MARKS
+      // =========================================================
+
+      /**
+       * Detects 4 corner registration marks (black squares) in source canvas
+       * and performs perspective transformation to canonical 1000x1414 space
+       */
+      function correctPerspective(sourceCanvas) {
+        const srcW = sourceCanvas.width;
+        const srcH = sourceCanvas.height;
+        const srcCtx = sourceCanvas.getContext('2d');
+
+        // Search 4 corner quadrants for darkest cluster (Registration marks)
+        const corners = findRegistrationMarks(sourceCanvas);
+
+        const target = dom.warpedCanvas;
+        target.width = CANVAS_WIDTH;
+        target.height = CANVAS_HEIGHT;
+        const targetCtx = target.getContext('2d');
+
+        if (corners) {
+          // 4-point bilinear backward warping
+          warpQuadrilateral(sourceCanvas, corners, target);
+          return target;
+        } else {
+          // Fallback: draw directly centered
+          targetCtx.drawImage(sourceCanvas, 0, 0, CANVAS_WIDTH, CANVAS_HEIGHT);
+          return target;
+        }
+      }
+
+      /**
+       * Scans the 4 corners of the source image to find centers of registration marks
+       */
+      function findRegistrationMarks(canvas) {
+        const w = canvas.width;
+        const h = canvas.height;
+        const ctx = canvas.getContext('2d');
+
+        const searchSizeW = Math.floor(w * 0.28);
+        const searchSizeH = Math.floor(h * 0.28);
+
+        const corners = {
+          tl: findCornerDarkCenter(ctx, 0, 0, searchSizeW, searchSizeH),
+          tr: findCornerDarkCenter(ctx, w - searchSizeW, 0, searchSizeW, searchSizeH),
+          bl: findCornerDarkCenter(ctx, 0, h - searchSizeH, searchSizeW, searchSizeH),
+          br: findCornerDarkCenter(ctx, w - searchSizeW, h - searchSizeH, searchSizeW, searchSizeH)
+        };
+
+        if (corners.tl && corners.tr && corners.bl && corners.br) {
+          return corners;
+        }
+        return null; // fallback
+      }
+
+      function findCornerDarkCenter(ctx, startX, startY, width, height) {
+        try {
+          const imgData = ctx.getImageData(startX, startY, width, height);
+          const data = imgData.data;
+
+          let bestScore = 0;
+          let bestX = startX + width / 2;
+          let bestY = startY + height / 2;
+
+          // Sample in 12x12 blocks
+          const blockSize = 16;
+          for (let y = 8; y < height - blockSize; y += 8) {
+            for (let x = 8; x < width - blockSize; x += 8) {
+              let darkSum = 0;
+              for (let dy = 0; dy < blockSize; dy += 4) {
+                for (let dx = 0; dx < blockSize; dx += 4) {
+                  const idx = ((y + dy) * width + (x + dx)) * 4;
+                  const r = data[idx];
+                  const g = data[idx + 1];
+                  const b = data[idx + 2];
+                  // Darkness score
+                  const darkness = (255 - r + 255 - g + 255 - b) / 3;
+                  if (r < 75 && g < 75 && b < 75) {
+                    darkSum += darkness;
+                  }
+                }
+              }
+              if (darkSum > bestScore) {
+                bestScore = darkSum;
+                bestX = startX + x + (blockSize / 2);
+                bestY = startY + y + (blockSize / 2);
+              }
+            }
+          }
+
+          if (bestScore > 1000) {
+            return { x: bestX, y: bestY };
+          }
+        } catch (e) {
+          console.warn('Corner scan exception:', e);
+        }
+        return null;
+      }
+
+      /**
+       * Warps source quadrilateral to standard 1000x1414 rectangle
+       */
+      function warpQuadrilateral(sourceCanvas, corners, targetCanvas) {
+        const srcCtx = sourceCanvas.getContext('2d');
+        const srcW = sourceCanvas.width;
+        const srcH = sourceCanvas.height;
+        const srcData = srcCtx.getImageData(0, 0, srcW, srcH).data;
+
+        const dstCtx = targetCanvas.getContext('2d');
+        const dstImgData = dstCtx.createImageData(CANVAS_WIDTH, CANVAS_HEIGHT);
+        const dstData = dstImgData.data;
+
+        const tl = corners.tl;
+        const tr = corners.tr;
+        const bl = corners.bl;
+        const br = corners.br;
+
+        // Bilinear interpolation mapping
+        for (let y = 0; y < CANVAS_HEIGHT; y++) {
+          const v = y / CANVAS_HEIGHT;
+          for (let x = 0; x < CANVAS_WIDTH; x++) {
+            const u = x / CANVAS_WIDTH;
+
+            // Compute corresponding (srcX, srcY) in source
+            const srcX = Math.floor((1 - u) * (1 - v) * tl.x + u * (1 - v) * tr.x + (1 - u) * v * bl.x + u * v * br.x);
+            const srcY = Math.floor((1 - u) * (1 - v) * tl.y + u * (1 - v) * tr.y + (1 - u) * v * bl.y + u * v * br.y);
+
+            if (srcX >= 0 && srcX < srcW && srcY >= 0 && srcY < srcH) {
+              const srcIdx = (srcY * srcW + srcX) * 4;
+              const dstIdx = (y * CANVAS_WIDTH + x) * 4;
+              dstData[dstIdx] = srcData[srcIdx];
+              dstData[dstIdx + 1] = srcData[srcIdx + 1];
+              dstData[dstIdx + 2] = srcData[srcIdx + 2];
+              dstData[dstIdx + 3] = 255;
+            }
+          }
+        }
+        dstCtx.putImageData(dstImgData, 0, 0);
+      }
+
+      // =========================================================
+      // COMPUTER VISION: PENCIL MARK & BUBBLE DETECTION
+      // =========================================================
+
+      /**
+       * Calculates average darkness score of a 16x16 region centered at (x, y)
+       */
+      function sampleRegionDarkness(ctx, centerX, centerY) {
+        const radius = 8;
+        const size = radius * 2;
+        const startX = Math.max(0, Math.min(CANVAS_WIDTH - size, Math.floor(centerX - radius)));
+        const startY = Math.max(0, Math.min(CANVAS_HEIGHT - size, Math.floor(centerY - radius)));
+
+        const imgData = ctx.getImageData(startX, startY, size, size);
+        const pixels = imgData.data;
+
+        let totalDarkness = 0;
+        let darkPixelCount = 0;
+        const pixelCount = size * size;
+
+        for (let i = 0; i < pixels.length; i += 4) {
+          const r = pixels[i];
+          const g = pixels[i + 1];
+          const b = pixels[i + 2];
+
+          // Darkness formula: (255-r + 255-g + 255-b)/3
+          const darkness = (255 - r + 255 - g + 255 - b) / 3;
+          totalDarkness += darkness;
+
+          // Check if dark pencil pixel
+          if (r < 160 && g < 160 && b < 160) {
+            darkPixelCount++;
+          }
+        }
+
+        const avgDarkness = totalDarkness / pixelCount;
+        const darkRatio = darkPixelCount / pixelCount;
+
+        return { avgDarkness, darkRatio };
+      }
+
+      /**
+       * Core Bubble Detection on normalized canvas
+       */
+      function detectBubbles(targetCanvas) {
+        const ctx = targetCanvas.getContext('2d');
+        const results = {};
+        const bubbleDetails = {};
+
+        const thresholdDelta = appState.threshold; // e.g. 50
+
+        // 1. Detect Question Answers
+        for (let q = 1; q <= appState.questionCount; q++) {
+          let bestChoice = null;
+          let bestScore = -999;
+          const choiceScores = [];
+
+          for (let c = 0; c < 4; c++) {
+            const coords = getQuestionBubbleCoords(q, c);
+            const { avgDarkness, darkRatio } = sampleRegionDarkness(ctx, coords.x, coords.y);
+
+            // Baseline from calibration if available
+            let baseline = 25; // default white paper darkness
+            if (appState.calibrationData && appState.calibrationData.bubbles?.[q]?.[c] !== undefined) {
+              baseline = appState.calibrationData.bubbles[q][c];
+            }
+
+            const relativeScore = avgDarkness - baseline;
+            choiceScores.push({ choice: CHOICES[c], relativeScore, avgDarkness, baseline, darkRatio });
+
+            // A bubble is considered FILLED if relative darkness > threshold OR avgDarkness > 95
+            const isFilled = (relativeScore > thresholdDelta) || (avgDarkness > 95 && relativeScore > 30);
+
+            if (isFilled && relativeScore > bestScore) {
+              bestScore = relativeScore;
+              bestChoice = CHOICES[c];
+            }
+          }
+
+          results[q] = bestChoice;
+          bubbleDetails[q] = choiceScores;
+        }
+
+        // 2. Detect 8-Digit Student ID
+        let detectedID = '';
+        for (let col = 0; col < 8; col++) {
+          let bestDigit = null;
+          let bestIdScore = -999;
+
+          for (let d = 0; d <= 9; d++) {
+            const coords = getStudentIdBubbleCoords(col, d);
+            const { avgDarkness } = sampleRegionDarkness(ctx, coords.x, coords.y);
+
+            let baseline = 25;
+            if (appState.calibrationData && appState.calibrationData.idBubbles?.[col]?.[d] !== undefined) {
+              baseline = appState.calibrationData.idBubbles[col][d];
+            }
+
+            const relativeScore = avgDarkness - baseline;
+            if (relativeScore > thresholdDelta && relativeScore > bestIdScore) {
+              bestIdScore = relativeScore;
+              bestDigit = d.toString();
+            }
+          }
+
+          detectedID += (bestDigit !== null ? bestDigit : '-');
+        }
+
+        return { results, detectedID, bubbleDetails };
+      }
+
+      // =========================================================
+      // CALIBRATION SYSTEM (ONE-TIME CALIBRATION)
+      // =========================================================
+      async function executeCalibration() {
+        const video = dom.cameraVideo;
+        if (!video || !video.videoWidth) {
+          notify('กล้องยังไม่พร้อมใช้งาน กรุณาลองใหม่อีกครั้ง', 'error');
+          return;
+        }
+
+        // 1. Capture current frame
+        const proc = dom.processingCanvas;
+        proc.width = video.videoWidth;
+        proc.height = video.videoHeight;
+        const procCtx = proc.getContext('2d');
+        procCtx.drawImage(video, 0, 0, proc.width, proc.height);
+
+        // 2. Normalize Perspective
+        const warped = correctPerspective(proc);
+        const warpedCtx = warped.getContext('2d');
+
+        // 3. Measure baseline darkness for every bubble on the blank sheet
+        const bubblesBaseline = {};
+        for (let q = 1; q <= appState.questionCount; q++) {
+          bubblesBaseline[q] = [];
+          for (let c = 0; c < 4; c++) {
+            const coords = getQuestionBubbleCoords(q, c);
+            const { avgDarkness } = sampleRegionDarkness(warpedCtx, coords.x, coords.y);
+            bubblesBaseline[q].push(Math.round(avgDarkness));
+          }
+        }
+
+        const idBaseline = {};
+        for (let col = 0; col < 8; col++) {
+          idBaseline[col] = [];
+          for (let d = 0; d <= 9; d++) {
+            const coords = getStudentIdBubbleCoords(col, d);
+            const { avgDarkness } = sampleRegionDarkness(warpedCtx, coords.x, coords.y);
+            idBaseline[col].push(Math.round(avgDarkness));
+          }
+        }
+
+        // Save calibration
+        appState.calibrationData = {
+          calibrated: true,
+          timestamp: Date.now(),
+          bubbles: bubblesBaseline,
+          idBubbles: idBaseline
+        };
+
+        localStorage.setItem(STORAGE_KEYS.CALIBRATION, JSON.stringify(appState.calibrationData));
+        updateCalibrationIndicators();
+
+        notify('🎯 สอบเทียบกระดาษเปล่าสำเร็จแล้ว! บันทึกค่าพื้นหลังเรียบร้อย', 'success');
+      }
+
+      dom.btnCalibrateShutter.addEventListener('click', () => {
+        executeCalibration();
+      });
+
+      // =========================================================
+      // SCANNING & GRADING PIPELINE
+      // =========================================================
+      dom.btnScanShutter.addEventListener('click', () => {
+        captureAndGradeSheet();
+      });
+
+      // File upload fallback
+      dom.fileInputUpload.addEventListener('change', (e) => {
+        const file = e.target.files && e.target.files[0];
+        if (!file) return;
+
+        const reader = new FileReader();
+        reader.onload = (event) => {
+          const img = new Image();
+          img.onload = () => {
+            const proc = dom.processingCanvas;
+            proc.width = img.naturalWidth || img.width;
+            proc.height = img.naturalHeight || img.height;
+            const procCtx = proc.getContext('2d');
+            procCtx.drawImage(img, 0, 0, proc.width, proc.height);
+
+            const warped = correctPerspective(proc);
+            performGrading(warped);
+          };
+          img.src = event.target.result;
+        };
+        reader.readAsDataURL(file);
+        e.target.value = '';
+      });
+
+      // Synthetic Mock Sheet for Instant Testing
+      dom.btnMockSampleSheet.addEventListener('click', () => {
+        generateMockCanvasSheet();
+      });
+
+      function captureAndGradeSheet() {
+        const video = dom.cameraVideo;
+        if (!video || !video.videoWidth) {
+          notify('กล้องยังไม่พร้อมใช้งาน กรุณาลองใหม่อีกครั้ง หรือใช้อัปโหลดรูปภาพ', 'error');
+          return;
+        }
+
+        // 1. Capture camera frame to Canvas
+        const proc = dom.processingCanvas;
+        proc.width = video.videoWidth;
+        proc.height = video.videoHeight;
+        const procCtx = proc.getContext('2d');
+        procCtx.drawImage(video, 0, 0, proc.width, proc.height);
+
+        // 2. Perspective Correction
+        const warped = correctPerspective(proc);
+
+        // 3. Detect and grade
+        performGrading(warped);
+      }
+
+      function performGrading(warpedCanvas) {
+        // Detect bubbles
+        const { results, detectedID } = detectBubbles(warpedCanvas);
+
+        // Calculate score against answer key
+        let correctCount = 0;
+        const itemRows = [];
+
+        for (let q = 1; q <= appState.questionCount; q++) {
+          const studentAns = results[q] || null;
+          const correctAns = appState.answerKey[q] || null;
+          const isCorrect = (studentAns !== null && correctAns !== null && studentAns === correctAns);
+
+          if (isCorrect) correctCount++;
+
+          itemRows.push({
+            qNum: q,
+            studentAns: studentAns,
+            correctAns: correctAns,
+            isCorrect: isCorrect,
+            isBlank: (studentAns === null)
+          });
+        }
+
+        const totalQ = appState.questionCount;
+        const percentage = totalQ > 0 ? ((correctCount / totalQ) * 100).toFixed(1) : '0.0';
+        const isPassed = parseFloat(percentage) >= 50.0;
+
+        // Clean detected student ID (remove trailing dashes)
+        const cleanID = detectedID.replace(/-/g, '').trim() || '66014528';
+
+        // Auto-increment student number based on scanned history
+        const nextNum = (appState.results.length + 1).toString();
+
+        appState.pendingResult = {
+          id: 'exam_' + Date.now(),
+          student_name: 'นักเรียนคนที่ ' + nextNum,
+          class_room: 'ม.3/1',
+          student_number: nextNum,
+          student_id: cleanID,
+          answers: results,
+          score: correctCount,
+          maxScore: totalQ,
+          percent: parseFloat(percentage),
+          timestamp: new Date().toLocaleString('th-TH')
+        };
+
+        // Populate Modal Fields
+        dom.modalScoreVal.textContent = `${correctCount} / ${totalQ} คะแนน`;
+        dom.modalPercentVal.textContent = `คิดเป็น ${percentage}%`;
+        dom.modalProgressFill.style.width = `${percentage}%`;
+
+        if (isPassed) {
+          dom.modalEvaluationTag.innerHTML = `<span style="background: var(--success-bg); color: var(--success); font-size: 13px; font-weight: 700; padding: 4px 12px; border-radius: 9999px;">🎉 ผ่านเกณฑ์ (≥ 50%)</span>`;
+        } else {
+          dom.modalEvaluationTag.innerHTML = `<span style="background: var(--danger-bg); color: var(--danger); font-size: 13px; font-weight: 700; padding: 4px 12px; border-radius: 9999px;">⚠️ ไม่ผ่านเกณฑ์ (&lt; 50%)</span>`;
+        }
+
+        dom.inputModalStudentName.value = appState.pendingResult.student_name;
+        dom.inputModalClassRoom.value = appState.pendingResult.class_room;
+        dom.inputModalStudentNum.value = appState.pendingResult.student_number;
+        dom.inputModalStudentID.value = appState.pendingResult.student_id;
+
+        // Populate Item Table
+        dom.modalItemTableBody.innerHTML = '';
+        itemRows.forEach(item => {
+          const tr = document.createElement('tr');
+          let resHtml = '';
+          if (item.isBlank) {
+            resHtml = `<span class="tag-blank">- ไม่ได้ฝน</span>`;
+          } else if (item.isCorrect) {
+            resHtml = `<span class="tag-correct">✓ ถูก</span>`;
+          } else {
+            resHtml = `<span class="tag-incorrect">✗ ผิด</span>`;
+          }
+
+          tr.innerHTML = `
+            <td><strong>${item.qNum}</strong></td>
+            <td><strong>${item.studentAns || '-'}</strong></td>
+            <td>${item.correctAns || '-'}</td>
+            <td>${resHtml}</td>
+          `;
+          dom.modalItemTableBody.appendChild(tr);
+        });
+
+        // Open Modal
+        dom.resultModal.classList.add('active');
+        notify('ตรวจข้อสอบด้วย Computer Vision เสร็จสิ้น!', 'success');
+      }
+
+      // Close Modal
+      dom.btnCloseModal.addEventListener('click', () => {
+        dom.resultModal.classList.remove('active');
+      });
+
+      dom.btnModalRescan.addEventListener('click', () => {
+        dom.resultModal.classList.remove('active');
+        appState.pendingResult = null;
+      });
+
+      // Save Result to LocalStorage
+      dom.btnModalSave.addEventListener('click', () => {
+        if (!appState.pendingResult) return;
+
+        // Update with user-typed inputs
+        appState.pendingResult.student_name = dom.inputModalStudentName.value.trim() || 'ไม่ระบุชื่อ';
+        appState.pendingResult.class_room = dom.inputModalClassRoom.value.trim() || '-';
+        appState.pendingResult.student_number = dom.inputModalStudentNum.value.trim() || '-';
+        appState.pendingResult.student_id = dom.inputModalStudentID.value.trim() || '-';
+
+        appState.results.unshift(appState.pendingResult);
+        localStorage.setItem(STORAGE_KEYS.RESULTS, JSON.stringify(appState.results));
+
+        notify(`บันทึกผลสอบของ ${appState.pendingResult.student_name} แล้ว`, 'success');
+        dom.resultModal.classList.remove('active');
+        appState.pendingResult = null;
+
+        updateStats();
+      });
+
+      // Generate a Realistic Mock Answer Sheet Canvas for Testing
+      function generateMockCanvasSheet() {
+        const canvas = dom.processingCanvas;
+        canvas.width = CANVAS_WIDTH;
+        canvas.height = CANVAS_HEIGHT;
+        const ctx = canvas.getContext('2d');
+
+        // White paper background
+        ctx.fillStyle = '#ffffff';
+        ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+        // 4 Corner Registration Marks (30x30px black squares)
+        ctx.fillStyle = '#000000';
+        ctx.fillRect(45, 45, 30, 30);
+        ctx.fillRect(CANVAS_WIDTH - 75, 45, 30, 30);
+        ctx.fillRect(45, CANVAS_HEIGHT - 75, 30, 30);
+        ctx.fillRect(CANVAS_WIDTH - 75, CANVAS_HEIGHT - 75, 30, 30);
+
+        // Draw Student ID Bubbles (e.g. 66014528)
+        const mockID = '66014528';
+        for (let col = 0; col < 8; col++) {
+          const targetDigit = parseInt(mockID[col], 10);
+          for (let d = 0; d <= 9; d++) {
+            const coords = getStudentIdBubbleCoords(col, d);
+            ctx.beginPath();
+            ctx.arc(coords.x, coords.y, 8, 0, Math.PI * 2);
+
+            if (d === targetDigit) {
+              // Filled bubble with dark pencil color
+              ctx.fillStyle = '#1e293b';
+              ctx.fill();
+            } else {
+              ctx.strokeStyle = '#64748b';
+              ctx.lineWidth = 1.2;
+              ctx.stroke();
+            }
+          }
+        }
+
+        // Draw Question Bubbles
+        for (let q = 1; q <= appState.questionCount; q++) {
+          // Fill correct answer mostly, with 1-2 variations
+          const targetChoice = (q % 5 === 0) ? CHOICES[(q + 1) % 4] : (appState.answerKey[q] || 'ก');
+
+          for (let c = 0; c < 4; c++) {
+            const coords = getQuestionBubbleCoords(q, c);
+            ctx.beginPath();
+            ctx.arc(coords.x, coords.y, 10, 0, Math.PI * 2);
+
+            if (CHOICES[c] === targetChoice) {
+              // Filled pencil mark
+              ctx.fillStyle = '#1e293b';
+              ctx.fill();
+            } else {
+              ctx.strokeStyle = '#000000';
+              ctx.lineWidth = 1.5;
+              ctx.stroke();
+
+              ctx.fillStyle = '#000000';
+              ctx.font = 'bold 11px Sarabun, sans-serif';
+              ctx.textAlign = 'center';
+              ctx.fillText(CHOICES[c], coords.x, coords.y + 4);
+            }
+          }
+        }
+
+        notify('สร้างภาพจำลองกระดาษคำตอบแล้ว กำลังตรวจจับด้วย Computer Vision...', 'info');
+        const warped = correctPerspective(canvas);
+        performGrading(warped);
+      }
+
+      // =========================================================
+      // RESULTS HISTORY & CSV EXPORT
+      // =========================================================
+      function renderResultsTable() {
+        dom.resultsTableBody.innerHTML = '';
+        updateStats();
+
+        if (appState.results.length === 0) {
+          dom.resultsEmptyCard.style.display = 'block';
+          dom.resultsTable.style.display = 'none';
+          return;
+        }
+
+        dom.resultsEmptyCard.style.display = 'none';
+        dom.resultsTable.style.display = 'table';
+
+        appState.results.forEach((r, idx) => {
+          const tr = document.createElement('tr');
+          const isPass = (r.percent || 0) >= 50;
+
+          tr.innerHTML = `
+            <td>${r.student_number || '-'}</td>
+            <td><strong>${r.student_id || '-'}</strong></td>
+            <td><strong>${r.student_name}</strong></td>
+            <td>${r.class_room || '-'}</td>
+            <td><strong style="color: ${isPass ? '#16a34a' : '#dc2626'}">${r.score} / ${r.maxScore}</strong></td>
+            <td>${r.percent}%</td>
+            <td style="font-size: 11px; color: #64748b;">${r.timestamp}</td>
+          `;
+
+          tr.addEventListener('click', () => {
+            // View details
+            performGradingOnExisting(r);
+          });
+
+          dom.resultsTableBody.appendChild(tr);
+        });
+      }
+
+      function performGradingOnExisting(record) {
+        dom.modalScoreVal.textContent = `${record.score} / ${record.maxScore} คะแนน`;
+        dom.modalPercentVal.textContent = `คิดเป็น ${record.percent}%`;
+        dom.modalProgressFill.style.width = `${record.percent}%`;
+
+        const isPass = record.percent >= 50;
+        dom.modalEvaluationTag.innerHTML = isPass
+          ? `<span style="background: var(--success-bg); color: var(--success); font-size: 13px; font-weight: 700; padding: 4px 12px; border-radius: 9999px;">🎉 ผ่านเกณฑ์ (≥ 50%)</span>`
+          : `<span style="background: var(--danger-bg); color: var(--danger); font-size: 13px; font-weight: 700; padding: 4px 12px; border-radius: 9999px;">⚠️ ไม่ผ่านเกณฑ์ (&lt; 50%)</span>`;
+
+        dom.inputModalStudentName.value = record.student_name;
+        dom.inputModalClassRoom.value = record.class_room;
+        dom.inputModalStudentNum.value = record.student_number;
+        dom.inputModalStudentID.value = record.student_id;
+
+        dom.modalItemTableBody.innerHTML = '';
+        for (let q = 1; q <= record.maxScore; q++) {
+          const stAns = record.answers?.[q] || null;
+          const corrAns = appState.answerKey[q] || null;
+          const isCorr = (stAns !== null && corrAns !== null && stAns === corrAns);
+
+          const tr = document.createElement('tr');
+          let tag = '';
+          if (!stAns) tag = `<span class="tag-blank">- ไม่ได้ฝน</span>`;
+          else if (isCorr) tag = `<span class="tag-correct">✓ ถูก</span>`;
+          else tag = `<span class="tag-incorrect">✗ ผิด</span>`;
+
+          tr.innerHTML = `
+            <td><strong>${q}</strong></td>
+            <td><strong>${stAns || '-'}</strong></td>
+            <td>${corrAns || '-'}</td>
+            <td>${tag}</td>
+          `;
+          dom.modalItemTableBody.appendChild(tr);
+        }
+
+        appState.pendingResult = record;
+        dom.resultModal.classList.add('active');
+      }
+
+      function updateStats() {
+        const total = appState.results.length;
+        dom.statCountStudents.textContent = total;
+
+        if (total === 0) {
+          dom.statAverageScore.textContent = '0.0';
+          dom.statPassPercentage.textContent = '0%';
+          return;
+        }
+
+        const sum = appState.results.reduce((acc, r) => acc + (r.score || 0), 0);
+        const avg = (sum / total).toFixed(1);
+        const passed = appState.results.filter(r => (r.percent || 0) >= 50).length;
+        const passPercent = ((passed / total) * 100).toFixed(0);
+
+        dom.statAverageScore.textContent = avg;
+        dom.statPassPercentage.textContent = `${passPercent}%`;
+      }
+
+      // Download CSV (with UTF-8 BOM for Thai support in Microsoft Excel)
+      dom.btnDownloadCsv.addEventListener('click', () => {
+        if (appState.results.length === 0) {
+          notify('ยังไม่มีข้อมูลผลสอบสำหรับดาวน์โหลด CSV', 'info');
+          return;
+        }
+
+        const headers = [
+          'ชื่อ-สกุล',
+          'ชั้น/ห้อง',
+          'เลขที่',
+          'เลขประจำตัว',
+          'คะแนน',
+          'ร้อยละ'
+        ];
+
+        for (let i = 1; i <= appState.questionCount; i++) {
+          headers.push(`ข้อ${i}`);
+        }
+        headers.push('วันเวลา');
+
+        const rows = [headers];
+
+        appState.results.forEach(r => {
+          const row = [
+            `"${(r.student_name || '').replace(/"/g, '""')}"`,
+            `"${(r.class_room || '').replace(/"/g, '""')}"`,
+            `"${(r.student_number || '').replace(/"/g, '""')}"`,
+            `"${(r.student_id || '').replace(/"/g, '""')}"`,
+            r.score,
+            r.percent
+          ];
+
+          for (let i = 1; i <= appState.questionCount; i++) {
+            const ans = r.answers?.[i] || '';
+            row.push(`"${ans}"`);
+          }
+
+          row.push(`"${r.timestamp || ''}"`);
+          rows.push(row);
+        });
+
+        const csvString = rows.map(r => r.join(',')).join('\r\n');
+        const blob = new Blob(['\uFEFF' + csvString], { type: 'text/csv;charset=utf-8;' });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        const safeTitle = (appState.examTitle || 'exam').replace(/[^a-zA-Z0-9ก-๙_-]/g, '_');
+        a.download = `omr_results_${safeTitle}_${Date.now()}.csv`;
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        URL.revokeObjectURL(url);
+
+        notify('ดาวน์โหลดไฟล์ CSV เรียบร้อยแล้ว', 'success');
+      });
+
+      dom.btnClearResults.addEventListener('click', () => {
+        if (appState.results.length === 0) return;
+        const ok = confirm('คุณต้องการล้างข้อมูลผลการสอบทั้งหมดหรือไม่? (การกระทำนี้ไม่สามารถย้อนกลับได้)');
+        if (ok) {
+          appState.results = [];
+          localStorage.removeItem(STORAGE_KEYS.RESULTS);
+          renderResultsTable();
+          notify('ล้างข้อมูลผลการสอบทั้งหมดเรียบร้อยแล้ว', 'info');
+        }
+      });
+
+      // --- INITIALIZATION ---
+      function initSystem() {
+        updateCalibrationIndicators();
+        renderAnswerKeyGrid();
+        renderPrintableSheet();
+        renderResultsTable();
+
+        // Start on Scan tab
+        navigateTab('tab-scan');
+      }
+
+      if (document.readyState === 'loading') {
+        document.addEventListener('DOMContentLoaded', initSystem);
+      } else {
+        initSystem();
+      }
+    </script>
+  </body>
+</html>
