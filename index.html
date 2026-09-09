@@ -971,19 +971,20 @@
         font-family: 'Sarabun', sans-serif;
       }
 
-      /* 4 Corner Registration Marks (Solid 12x12px black squares) */
+      /* 4 Corner Registration Marks (Solid 18x18px black squares with quiet zone) */
       .reg-corner {
         position: absolute;
-        width: 12px;
-        height: 12px;
+        width: 18px;
+        height: 18px;
         background: #000000;
+        box-shadow: 0 0 0 3px #ffffff;
         z-index: 10;
       }
 
-      .reg-tl { top: 4px; left: 4px; }
-      .reg-tr { top: 4px; right: 4px; }
-      .reg-bl { bottom: 4px; left: 4px; }
-      .reg-br { bottom: 4px; right: 4px; }
+      .reg-tl { top: 12px; left: 12px; }
+      .reg-tr { top: 12px; right: 12px; }
+      .reg-bl { bottom: 12px; left: 12px; }
+      .reg-br { bottom: 12px; right: 12px; }
 
       /* LEFT PANE: Info, ID Grid, & Instructions (width: ~268px, height: ~518px) */
       .a5-left-pane {
@@ -1055,7 +1056,7 @@
         min-width: 24px;
       }
 
-      /* ZONE 3: Student ID Grid (8 digits) */
+      /* ZONE 3: Student ID Grid (5 digits - bubbles equal to answer choices) */
       .a5-zone-id {
         display: flex;
         flex-direction: column;
@@ -1064,21 +1065,22 @@
       }
 
       .a5-id-title {
-        font-size: 8pt;
+        font-size: 8.5pt;
         font-weight: 700;
         text-align: center;
-        line-height: 13px;
-        margin-bottom: 3px;
+        line-height: 14px;
+        margin-bottom: 4px;
         white-space: nowrap;
       }
 
       .a5-id-grid {
         display: flex;
-        gap: 3px;
+        gap: 6px;
+        justify-content: center;
       }
 
       .a5-id-col {
-        width: 13px;
+        width: 14px;
         display: flex;
         flex-direction: column;
         align-items: center;
@@ -1086,27 +1088,27 @@
       }
 
       .a5-id-box-write {
-        width: 14px;
-        height: 14px;
+        width: 15px;
+        height: 15px;
         border: 1px solid #000000;
         box-sizing: border-box;
         margin-bottom: 3px;
-        font-size: 7.5pt;
+        font-size: 8pt;
         text-align: center;
-        line-height: 12px;
+        line-height: 13px;
         background: #ffffff;
       }
 
       .a5-id-bubble {
-        width: 13px;
-        height: 13px;
+        width: 14px;
+        height: 14px;
         border: 1.2px solid #000000;
         border-radius: 50%;
         box-sizing: border-box;
         display: flex;
         align-items: center;
         justify-content: center;
-        font-size: 7pt;
+        font-size: 7.5pt;
         font-weight: 700;
         background: #ffffff;
         color: #000000;
@@ -1221,8 +1223,8 @@
       }
 
       .a5-bubble {
-        width: 13px;
-        height: 13px;
+        width: 14px;
+        height: 14px;
         border: 1.2px solid #000000;
         border-radius: 50%;
         box-sizing: border-box;
@@ -1234,6 +1236,39 @@
         background: #ffffff;
         color: #000000;
         line-height: 1;
+      }
+
+      /* Alignment Verification Modal Styles */
+      .alignment-status-banner {
+        width: 100%;
+        background: #eff6ff;
+        border: 1px solid #bfdbfe;
+        border-radius: 8px;
+        padding: 8px 12px;
+        font-size: 12px;
+        font-weight: 600;
+        color: #1e40af;
+        text-align: center;
+      }
+
+      .alignment-canvas-wrapper {
+        position: relative;
+        width: 100%;
+        max-width: 540px;
+        aspect-ratio: 210 / 148;
+        background: #020617;
+        border-radius: 8px;
+        overflow: hidden;
+        margin: 10px 0;
+        touch-action: none;
+        box-shadow: inset 0 2px 8px rgba(0, 0, 0, 0.6);
+      }
+
+      #alignmentCanvas {
+        width: 100%;
+        height: 100%;
+        display: block;
+        cursor: crosshair;
       }
 
       /* =========================================================
@@ -1513,9 +1548,9 @@
                   </div>
                 </div>
 
-                <!-- ZONE 3: Student ID Grid (8 digits) -->
+                <!-- ZONE 3: Student ID Grid (5 digits) -->
                 <div class="a5-zone-id">
-                  <div class="a5-id-title">เลขประจำตัวนักเรียน (8 หลัก)</div>
+                  <div class="a5-id-title">เลขประจำตัวนักเรียน (5 หลัก)</div>
                   <div class="a5-id-grid" id="sheetIdColsContainer">
                     <!-- Rendered by JS -->
                   </div>
@@ -1603,6 +1638,10 @@
                   📁 อัปโหลดรูป
                 </label>
                 <input type="file" id="fileInputUpload" accept="image/*" style="display: none;" />
+
+                <button type="button" class="btn-tool-pill" id="btnScanWithAdjust" title="ตรวจหาตำแหน่งจุดอ้างอิงและปรับแต่ง">
+                  🎯 ปรับจุดอ้างอิง
+                </button>
 
                 <button type="button" class="btn-tool-pill" id="btnMockSampleSheet">
                   🧪 ทดสอบภาพตัวอย่าง
@@ -1701,6 +1740,42 @@
     <!-- Toast Notifications Container -->
     <div class="toast-container" id="toastContainer"></div>
 
+    <!-- Post-Scan Reference Alignment Modal -->
+    <div class="modal-backdrop" id="alignmentModal">
+      <div class="bottom-sheet" style="max-height: 94vh;">
+        <div class="sheet-drag-pill"></div>
+        <div class="sheet-header">
+          <div class="sheet-title">🎯 ตรวจสอบตำแหน่งจุดอ้างอิงบนกระดาษ</div>
+          <button type="button" class="sheet-close-btn" id="btnCloseAlignmentModal">✕</button>
+        </div>
+
+        <div class="sheet-content" style="display: flex; flex-direction: column; align-items: center; padding: 12px 16px;">
+          <div class="alignment-status-banner" id="alignmentStatusBanner">
+            🔍 ตรวจหาตำแหน่งจุดอ้างอิง 4 มุมบนกระดาษคำตอบ...
+          </div>
+
+          <div class="alignment-canvas-wrapper" id="alignmentCanvasWrapper">
+            <canvas id="alignmentCanvas"></canvas>
+          </div>
+
+          <div style="display: flex; justify-content: space-between; width: 100%; max-width: 540px; font-size: 11px; color: var(--text-muted); padding: 0 4px;">
+            <span>🟢 บนซ้าย  🔵 บนขวา</span>
+            <span>💡 แตะลากหมุด 4 มุม ให้ตรงกับสี่เหลี่ยมดำบนกระดาษ</span>
+            <span>🟡 ล่างซ้าย  🟠 ล่างขวา</span>
+          </div>
+        </div>
+
+        <div class="sheet-footer" style="flex-wrap: wrap;">
+          <button type="button" class="btn btn-secondary" style="flex: 1; min-width: 120px;" id="btnAlignmentRedetect">
+            🔄 ค้นหาใหม่
+          </button>
+          <button type="button" class="btn btn-primary" style="flex: 1.6; min-width: 160px;" id="btnAlignmentConfirm">
+            ✅ ยืนยันจุด & ตรวจข้อสอบ
+          </button>
+        </div>
+      </div>
+    </div>
+
     <!-- Post-Scan Result Bottom Sheet Modal -->
     <div class="modal-backdrop" id="resultModal">
       <div class="bottom-sheet">
@@ -1737,9 +1812,9 @@
             </div>
             <div class="full-span">
               <label class="form-label" for="inputModalStudentID">
-                เลขประจำตัว (อ่านจากตารางฝนอัตโนมัติ)
+                เลขประจำตัว 5 หลัก (อ่านจากตารางฝนอัตโนมัติ)
               </label>
-              <input type="text" id="inputModalStudentID" class="input-text" placeholder="เช่น 66014528" />
+              <input type="text" id="inputModalStudentID" class="input-text" placeholder="เช่น 66145" />
             </div>
           </div>
 
@@ -1762,11 +1837,14 @@
           </div>
         </div>
 
-        <div class="sheet-footer">
-          <button type="button" class="btn btn-secondary" style="flex: 1;" id="btnModalRescan">
+        <div class="sheet-footer" style="flex-wrap: wrap;">
+          <button type="button" class="btn btn-secondary" style="flex: 1; min-width: 100px;" id="btnViewAlignment" title="ตรวจสอบตำแหน่งจุดอ้างอิงบนภาพที่ถ่าย">
+            🎯 จุดอ้างอิง
+          </button>
+          <button type="button" class="btn btn-secondary" style="flex: 1; min-width: 100px;" id="btnModalRescan">
             🔄 สแกนใหม่
           </button>
-          <button type="button" class="btn btn-primary" style="flex: 1.4;" id="btnModalSave">
+          <button type="button" class="btn btn-primary" style="flex: 1.4; min-width: 140px;" id="btnModalSave">
             ✅ บันทึกผลสอบ
           </button>
         </div>
@@ -1803,12 +1881,12 @@
       const CANVAS_WIDTH = 794;
       const CANVAS_HEIGHT = 559;
 
-      // 4 Registration Mark Centers in canonical space (Solid 12x12px at 4px inset)
+      // 4 Registration Mark Centers in canonical space (Solid 18x18px at 12px inset -> center = 12 + 9 = 21px)
       const CANONICAL_CORNERS = {
-        tl: { x: 10, y: 10 },
-        tr: { x: 784, y: 10 },
-        bl: { x: 10, y: 549 },
-        br: { x: 784, y: 549 }
+        tl: { x: 21, y: 21 },
+        tr: { x: 773, y: 21 },
+        bl: { x: 21, y: 538 },
+        br: { x: 773, y: 538 }
       };
 
       // --- APPLICATION STATE ---
@@ -1825,7 +1903,10 @@
         facingMode: 'environment',
         torchEnabled: false,
         pendingResult: null,
-        animFrameId: null
+        animFrameId: null,
+        lastCapturedCanvas: null,
+        detectedCorners: null,
+        manualCorners: null
       };
 
       // Load saved answer key
@@ -1904,6 +1985,7 @@
         btnToggleCameraFacing: document.getElementById('btnToggleCameraFacing'),
         btnToggleTorch: document.getElementById('btnToggleTorch'),
         fileInputUpload: document.getElementById('fileInputUpload'),
+        btnScanWithAdjust: document.getElementById('btnScanWithAdjust'),
         btnMockSampleSheet: document.getElementById('btnMockSampleSheet'),
         // Results tab
         statCountStudents: document.getElementById('statCountStudents'),
@@ -1914,9 +1996,18 @@
         resultsTable: document.getElementById('resultsTable'),
         resultsTableBody: document.getElementById('resultsTableBody'),
         resultsEmptyCard: document.getElementById('resultsEmptyCard'),
+        // Alignment Modal
+        alignmentModal: document.getElementById('alignmentModal'),
+        btnCloseAlignmentModal: document.getElementById('btnCloseAlignmentModal'),
+        alignmentStatusBanner: document.getElementById('alignmentStatusBanner'),
+        alignmentCanvas: document.getElementById('alignmentCanvas'),
+        alignmentCanvasWrapper: document.getElementById('alignmentCanvasWrapper'),
+        btnAlignmentRedetect: document.getElementById('btnAlignmentRedetect'),
+        btnAlignmentConfirm: document.getElementById('btnAlignmentConfirm'),
         // Result Modal
         resultModal: document.getElementById('resultModal'),
         btnCloseModal: document.getElementById('btnCloseModal'),
+        btnViewAlignment: document.getElementById('btnViewAlignment'),
         btnModalRescan: document.getElementById('btnModalRescan'),
         btnModalSave: document.getElementById('btnModalSave'),
         modalScoreVal: document.getElementById('modalScoreVal'),
@@ -1967,9 +2058,9 @@
 
         const colBaseX = isCol2 ? 541 : 322;
         const qLabelWidth = 30; // 26px width + 4px margin
-        const bubbleSpacing = 19; // 13px bubble + 6px gap
+        const bubbleSpacing = 20; // 14px bubble + 6px gap
 
-        const x = colBaseX + qLabelWidth + (choiceIndex * bubbleSpacing) + 6.5;
+        const x = colBaseX + qLabelWidth + (choiceIndex * bubbleSpacing) + 7;
         const y = 54 + (rowInCol * 22) + 11; // starts at Y=54, 22px per row, centered
 
         return { x, y };
@@ -1977,20 +2068,21 @@
 
       /**
        * Returns normalized canonical (x, y) coordinates for student ID bubble
-       * Left pane student ID grid located at startX: 96px, startY: 163px
-       * @param {number} digitPosition Digit position (0..7 left to right)
+       * 5-digit Student ID grid centered in left pane:
+       * 5 columns, 14px circle bubbles (same size as answer choices)
+       * @param {number} digitPosition Digit position (0..4 left to right)
        * @param {number} digitValue Digit value (0..9 top to bottom)
        */
       function getStudentIDBubbleCoords(digitPosition, digitValue) {
-        // digitPosition: 0-7 (left to right)
+        // digitPosition: 0-4 (left to right, 5 digits)
         // digitValue: 0-9 (top to bottom)
-        const gridStartX = 96; // centered in left pane (left: 26px, width: 268px)
-        const colSpacing = 16; // 13px bubble + 3px gap
-        const rowSpacing = 15; // 13px bubble + 2px gap
-        const gridStartY = 163; // Y coordinate where digit 0 bubble begins
+        const gridStartX = 113; // Centered in left pane (left: 26px, width: 268px, grid width: 94px)
+        const colSpacing = 20;  // 14px bubble + 6px gap (matching answer columns)
+        const rowSpacing = 16;  // 14px bubble + 2px gap
+        const gridStartY = 162; // Y coordinate where digit 0 bubble row begins
 
-        const x = gridStartX + (digitPosition * colSpacing) + 6.5;
-        const y = gridStartY + (digitValue * rowSpacing) + 6.5;
+        const x = gridStartX + (digitPosition * colSpacing) + 7;
+        const y = gridStartY + (digitValue * rowSpacing) + 7;
 
         return { x, y };
       }
@@ -2188,18 +2280,18 @@
           dom.sheetMaxScoreText.textContent = String(appState.questionCount);
         }
 
-        // ZONE 3: 8-Digit ID Grid
+        // ZONE 3: 5-Digit ID Grid
         dom.sheetIdColsContainer.innerHTML = '';
-        for (let c = 0; c < 8; c++) {
+        for (let c = 0; c < 5; c++) {
           const col = document.createElement('div');
           col.className = 'a5-id-col';
 
-          // Row 0: empty write box for handwritten numbers (14x14px)
+          // Row 0: empty write box for handwritten numbers (15x15px)
           const writeBox = document.createElement('div');
           writeBox.className = 'a5-id-box-write';
           col.appendChild(writeBox);
 
-          // Rows 1-10: Bubble rows for digits 0 to 9 (13px)
+          // Rows 1-10: Bubble rows for digits 0 to 9 (14px)
           for (let d = 0; d <= 9; d++) {
             const bubble = document.createElement('div');
             bubble.className = 'a5-id-bubble';
@@ -2463,9 +2555,9 @@
               }
             }
 
-            // Student ID dots (Purple)
+            // Student ID dots (Purple - 5 digits)
             ctx.fillStyle = 'rgba(168, 85, 247, 0.6)';
-            for (let col = 0; col < 8; col++) {
+            for (let col = 0; col < 5; col++) {
               for (let d = 0; d <= 9; d++) {
                 const norm = getStudentIdBubbleCoords(col, d);
                 const dotX = left + (norm.x / CANVAS_WIDTH) * width;
@@ -2488,103 +2580,256 @@
       // =========================================================
 
       /**
-       * Detects 4 corner registration marks (black squares) in source canvas
-       * and performs perspective transformation to canonical 1000x1414 space
+       * Calculates coordinates of the viewfinder frame relative to the video feed pixels
        */
-      function correctPerspective(sourceCanvas) {
-        const srcW = sourceCanvas.width;
-        const srcH = sourceCanvas.height;
-        const srcCtx = sourceCanvas.getContext('2d');
+      function getViewfinderVideoROI(video) {
+        const container = document.getElementById('cameraContainer');
+        const vf = document.getElementById('viewfinderFrame');
+        if (!container || !vf || !video.videoWidth) return null;
 
-        // Search 4 corner quadrants for darkest cluster (Registration marks)
-        const corners = findRegistrationMarks(sourceCanvas);
+        const contRect = container.getBoundingClientRect();
+        const vfRect = vf.getBoundingClientRect();
+        if (!contRect.width || !contRect.height) return null;
 
+        const scaleX = video.videoWidth / contRect.width;
+        const scaleY = video.videoHeight / contRect.height;
+
+        return {
+          x: Math.max(0, (vfRect.left - contRect.left) * scaleX),
+          y: Math.max(0, (vfRect.top - contRect.top) * scaleY),
+          width: Math.min(video.videoWidth, vfRect.width * scaleX),
+          height: Math.min(video.videoHeight, vfRect.height * scaleY)
+        };
+      }
+
+      /**
+       * Detects 4 corner registration marks (black squares) in source canvas
+       * and performs perspective transformation to canonical 794x559 space
+       */
+      function correctPerspective(sourceCanvas, customCorners = null, roiHint = null) {
         const target = dom.warpedCanvas;
         target.width = CANVAS_WIDTH;
         target.height = CANVAS_HEIGHT;
-        const targetCtx = target.getContext('2d');
 
-        if (corners) {
-          // 4-point bilinear backward warping
+        let corners = customCorners;
+        if (!corners) {
+          corners = findRegistrationMarks(sourceCanvas, roiHint);
+        }
+
+        appState.detectedCorners = corners ? { ...corners } : null;
+
+        if (corners && corners.tl && corners.tr && corners.bl && corners.br) {
           warpQuadrilateral(sourceCanvas, corners, target);
           return target;
         } else {
-          // Fallback: draw directly centered
+          // Fallback: draw directly
+          const targetCtx = target.getContext('2d');
           targetCtx.drawImage(sourceCanvas, 0, 0, CANVAS_WIDTH, CANVAS_HEIGHT);
           return target;
         }
       }
 
       /**
-       * Scans the 4 corners of the source image to find centers of registration marks
+       * Scans for the 4 registration marks (18x18 solid black squares)
        */
-      function findRegistrationMarks(canvas) {
+      function findRegistrationMarks(canvas, roiHint = null) {
         const w = canvas.width;
         const h = canvas.height;
         const ctx = canvas.getContext('2d');
 
-        const searchSizeW = Math.floor(w * 0.28);
-        const searchSizeH = Math.floor(h * 0.28);
+        let searchBoxes;
+        if (roiHint && roiHint.width > 100 && roiHint.height > 80) {
+          // Viewfinder ROI guided search
+          const marginW = Math.round(roiHint.width * 0.16);
+          const marginH = Math.round(roiHint.height * 0.16);
+          const boxW = Math.round(roiHint.width * 0.32);
+          const boxH = Math.round(roiHint.height * 0.32);
 
-        const corners = {
-          tl: findCornerDarkCenter(ctx, 0, 0, searchSizeW, searchSizeH),
-          tr: findCornerDarkCenter(ctx, w - searchSizeW, 0, searchSizeW, searchSizeH),
-          bl: findCornerDarkCenter(ctx, 0, h - searchSizeH, searchSizeW, searchSizeH),
-          br: findCornerDarkCenter(ctx, w - searchSizeW, h - searchSizeH, searchSizeW, searchSizeH)
-        };
-
-        if (corners.tl && corners.tr && corners.bl && corners.br) {
-          return corners;
+          searchBoxes = {
+            tl: { x: Math.max(0, Math.round(roiHint.x - marginW)), y: Math.max(0, Math.round(roiHint.y - marginH)), w: boxW, h: boxH },
+            tr: { x: Math.max(0, Math.round(roiHint.x + roiHint.width - boxW + marginW)), y: Math.max(0, Math.round(roiHint.y - marginH)), w: boxW, h: boxH },
+            bl: { x: Math.max(0, Math.round(roiHint.x - marginW)), y: Math.max(0, Math.round(roiHint.y + roiHint.height - boxH + marginH)), w: boxW, h: boxH },
+            br: { x: Math.max(0, Math.round(roiHint.x + roiHint.width - boxW + marginW)), y: Math.max(0, Math.round(roiHint.y + roiHint.height - boxH + marginH)), w: boxW, h: boxH }
+          };
+        } else {
+          // 4 Quadrants search (up to 34% from corners)
+          const sw = Math.round(w * 0.34);
+          const sh = Math.round(h * 0.34);
+          searchBoxes = {
+            tl: { x: 0, y: 0, w: sw, h: sh },
+            tr: { x: w - sw, y: 0, w: sw, h: sh },
+            bl: { x: 0, y: h - sh, w: sw, h: sh },
+            br: { x: w - sw, y: h - sh, w: sw, h: sh }
+          };
         }
-        return null; // fallback
+
+        const tl = findCornerDarkCenter(ctx, searchBoxes.tl.x, searchBoxes.tl.y, searchBoxes.tl.w, searchBoxes.tl.h);
+        const tr = findCornerDarkCenter(ctx, searchBoxes.tr.x, searchBoxes.tr.y, searchBoxes.tr.w, searchBoxes.tr.h);
+        const bl = findCornerDarkCenter(ctx, searchBoxes.bl.x, searchBoxes.bl.y, searchBoxes.bl.w, searchBoxes.bl.h);
+        const br = findCornerDarkCenter(ctx, searchBoxes.br.x, searchBoxes.br.y, searchBoxes.br.w, searchBoxes.br.h);
+
+        const corners = { tl, tr, bl, br };
+
+        // Count how many corners were successfully found
+        const found = [tl, tr, bl, br].filter(c => c && c.confidence);
+
+        // If 3 corners found with high confidence, infer the 4th corner via parallelogram
+        if (found.length === 3) {
+          if (!tl || !tl.confidence) corners.tl = { x: Math.round(tr.x + bl.x - br.x), y: Math.round(tr.y + bl.y - br.y), confidence: true };
+          else if (!tr || !tr.confidence) corners.tr = { x: Math.round(tl.x + br.x - bl.x), y: Math.round(tl.y + br.y - bl.y), confidence: true };
+          else if (!bl || !bl.confidence) corners.bl = { x: Math.round(tl.x + br.x - tr.x), y: Math.round(tl.y + br.y - tr.y), confidence: true };
+          else if (!br || !br.confidence) corners.br = { x: Math.round(tr.x + bl.x - tl.x), y: Math.round(tr.y + bl.y - tl.y), confidence: true };
+        }
+
+        // Geometric verification
+        if (corners.tl && corners.tr && corners.bl && corners.br) {
+          const spanX = corners.tr.x - corners.tl.x;
+          const spanY = corners.bl.y - corners.tl.y;
+          if (spanX > w * 0.35 && spanY > h * 0.35 && corners.br.x > corners.bl.x + 80 && corners.br.y > corners.tr.y + 80) {
+            return corners;
+          }
+        }
+
+        // Fallback default coordinates
+        if (roiHint && roiHint.width > 100) {
+          return {
+            tl: { x: Math.round(roiHint.x + 12), y: Math.round(roiHint.y + 12), confidence: false },
+            tr: { x: Math.round(roiHint.x + roiHint.width - 12), y: Math.round(roiHint.y + 12), confidence: false },
+            bl: { x: Math.round(roiHint.x + 12), y: Math.round(roiHint.y + roiHint.height - 12), confidence: false },
+            br: { x: Math.round(roiHint.x + roiHint.width - 12), y: Math.round(roiHint.y + roiHint.height - 12), confidence: false }
+          };
+        }
+
+        return {
+          tl: { x: Math.round(w * 0.04), y: Math.round(h * 0.04), confidence: false },
+          tr: { x: Math.round(w * 0.96), y: Math.round(h * 0.04), confidence: false },
+          bl: { x: Math.round(w * 0.04), y: Math.round(h * 0.96), confidence: false },
+          br: { x: Math.round(w * 0.96), y: Math.round(h * 0.96), confidence: false }
+        };
       }
 
+      /**
+       * Searches a region for a solid black registration mark with white quiet border
+       */
       function findCornerDarkCenter(ctx, startX, startY, width, height) {
         try {
-          const imgData = ctx.getImageData(startX, startY, width, height);
+          const clampedX = Math.max(0, Math.floor(startX));
+          const clampedY = Math.max(0, Math.floor(startY));
+          const clampedW = Math.min(ctx.canvas.width - clampedX, Math.floor(width));
+          const clampedH = Math.min(ctx.canvas.height - clampedY, Math.floor(height));
+          if (clampedW < 20 || clampedH < 20) return null;
+
+          const imgData = ctx.getImageData(clampedX, clampedY, clampedW, clampedH);
           const data = imgData.data;
 
-          let bestScore = 0;
-          let bestX = startX + width / 2;
-          let bestY = startY + height / 2;
+          // Estimate white paper brightness in this region (80th percentile luminance)
+          const samples = [];
+          const step = Math.max(1, Math.floor((clampedW * clampedH) / 120));
+          for (let i = 0; i < data.length; i += step * 4) {
+            const lum = 0.299 * data[i] + 0.587 * data[i + 1] + 0.114 * data[i + 2];
+            samples.push(lum);
+          }
+          samples.sort((a, b) => a - b);
+          const paperLum = samples[Math.floor(samples.length * 0.82)] || 210;
+          const darkThresh = Math.max(40, Math.min(140, paperLum * 0.56));
 
-          // Sample in 12x12 blocks
-          const blockSize = 16;
-          for (let y = 8; y < height - blockSize; y += 8) {
-            for (let x = 8; x < width - blockSize; x += 8) {
+          // Scan with candidate registration mark size (~16x16 px)
+          const markSize = 16;
+          let bestScore = -99999;
+          let bestBoxX = 0;
+          let bestBoxY = 0;
+
+          const stride = 6;
+          for (let y = 4; y <= clampedH - markSize - 4; y += stride) {
+            for (let x = 4; x <= clampedW - markSize - 4; x += stride) {
               let darkSum = 0;
-              for (let dy = 0; dy < blockSize; dy += 4) {
-                for (let dx = 0; dx < blockSize; dx += 4) {
-                  const idx = ((y + dy) * width + (x + dx)) * 4;
-                  const r = data[idx];
-                  const g = data[idx + 1];
-                  const b = data[idx + 2];
-                  // Darkness score
-                  const darkness = (255 - r + 255 - g + 255 - b) / 3;
-                  if (r < 75 && g < 75 && b < 75) {
-                    darkSum += darkness;
+              let darkCount = 0;
+
+              // Sample inside the candidate box
+              for (let dy = 2; dy < markSize - 2; dy += 3) {
+                for (let dx = 2; dx < markSize - 2; dx += 3) {
+                  const idx = ((y + dy) * clampedW + (x + dx)) * 4;
+                  const lum = 0.299 * data[idx] + 0.587 * data[idx + 1] + 0.114 * data[idx + 2];
+                  if (lum < darkThresh) {
+                    darkCount++;
+                    darkSum += (paperLum - lum);
                   }
                 }
               }
-              if (darkSum > bestScore) {
-                bestScore = darkSum;
-                bestX = startX + x + (blockSize / 2);
-                bestY = startY + y + (blockSize / 2);
+
+              // Contrast with surrounding border (quiet zone)
+              let borderSum = 0;
+              let borderCount = 0;
+              const borderOffsets = [-4, markSize + 2];
+              for (const bo of borderOffsets) {
+                const py = y + bo;
+                if (py >= 0 && py < clampedH) {
+                  for (let bx = 0; bx < markSize; bx += 4) {
+                    const idx = (py * clampedW + (x + bx)) * 4;
+                    const lum = 0.299 * data[idx] + 0.587 * data[idx + 1] + 0.114 * data[idx + 2];
+                    borderSum += lum;
+                    borderCount++;
+                  }
+                }
+              }
+
+              const borderAvg = borderCount > 0 ? borderSum / borderCount : paperLum;
+              const score = darkSum * (borderAvg / paperLum) + (darkCount * 15);
+
+              if (score > bestScore) {
+                bestScore = score;
+                bestBoxX = x;
+                bestBoxY = y;
               }
             }
           }
 
-          if (bestScore > 1000) {
-            return { x: bestX, y: bestY };
+          if (bestScore > 200) {
+            // Refine centroid (center of mass) of dark pixels around bestBox
+            let sumWeight = 0;
+            let sumX = 0;
+            let sumY = 0;
+
+            const rx = Math.max(0, bestBoxX - 4);
+            const ry = Math.max(0, bestBoxY - 4);
+            const rw = Math.min(clampedW - rx, markSize + 8);
+            const rh = Math.min(clampedH - ry, markSize + 8);
+
+            for (let cy = ry; cy < ry + rh; cy++) {
+              for (let cx = rx; cx < rx + rw; cx++) {
+                const idx = (cy * clampedW + cx) * 4;
+                const lum = 0.299 * data[idx] + 0.587 * data[idx + 1] + 0.114 * data[idx + 2];
+                if (lum < darkThresh) {
+                  const wgt = paperLum - lum;
+                  sumWeight += wgt;
+                  sumX += cx * wgt;
+                  sumY += cy * wgt;
+                }
+              }
+            }
+
+            if (sumWeight > 0) {
+              return {
+                x: Math.round(clampedX + (sumX / sumWeight)),
+                y: Math.round(clampedY + (sumY / sumWeight)),
+                confidence: true
+              };
+            }
           }
         } catch (e) {
-          console.warn('Corner scan exception:', e);
+          console.warn('findCornerDarkCenter exception:', e);
         }
-        return null;
+
+        return {
+          x: Math.round(startX + width / 2),
+          y: Math.round(startY + height / 2),
+          confidence: false
+        };
       }
 
       /**
-       * Warps source quadrilateral to standard 1000x1414 rectangle
+       * Warps source quadrilateral defined by 4 registration marks to canonical A5 (794x559)
+       * Maps detected TL mark -> (21, 21), TR -> (773, 21), BL -> (21, 538), BR -> (773, 538)
        */
       function warpQuadrilateral(sourceCanvas, corners, targetCanvas) {
         const srcCtx = sourceCanvas.getContext('2d');
@@ -2601,22 +2846,32 @@
         const bl = corners.bl;
         const br = corners.br;
 
-        // Bilinear interpolation mapping
-        for (let y = 0; y < CANVAS_HEIGHT; y++) {
-          const v = y / CANVAS_HEIGHT;
-          for (let x = 0; x < CANVAS_WIDTH; x++) {
-            const u = x / CANVAS_WIDTH;
+        // Canonical span between registration marks
+        const spanX = CANONICAL_CORNERS.tr.x - CANONICAL_CORNERS.tl.x; // 773 - 21 = 752
+        const spanY = CANONICAL_CORNERS.bl.y - CANONICAL_CORNERS.tl.y; // 538 - 21 = 517
 
-            // Compute corresponding (srcX, srcY) in source
-            const srcX = Math.floor((1 - u) * (1 - v) * tl.x + u * (1 - v) * tr.x + (1 - u) * v * bl.x + u * v * br.x);
-            const srcY = Math.floor((1 - u) * (1 - v) * tl.y + u * (1 - v) * tr.y + (1 - u) * v * bl.y + u * v * br.y);
+        for (let y = 0; y < CANVAS_HEIGHT; y++) {
+          const v = (y - CANONICAL_CORNERS.tl.y) / spanY;
+          for (let x = 0; x < CANVAS_WIDTH; x++) {
+            const u = (x - CANONICAL_CORNERS.tl.x) / spanX;
+
+            // Bilinear interpolation mapping from canonical to source image
+            const srcX = Math.round((1 - u) * (1 - v) * tl.x + u * (1 - v) * tr.x + (1 - u) * v * bl.x + u * v * br.x);
+            const srcY = Math.round((1 - u) * (1 - v) * tl.y + u * (1 - v) * tr.y + (1 - u) * v * bl.y + u * v * br.y);
+
+            const dstIdx = (y * CANVAS_WIDTH + x) * 4;
 
             if (srcX >= 0 && srcX < srcW && srcY >= 0 && srcY < srcH) {
               const srcIdx = (srcY * srcW + srcX) * 4;
-              const dstIdx = (y * CANVAS_WIDTH + x) * 4;
               dstData[dstIdx] = srcData[srcIdx];
               dstData[dstIdx + 1] = srcData[srcIdx + 1];
               dstData[dstIdx + 2] = srcData[srcIdx + 2];
+              dstData[dstIdx + 3] = 255;
+            } else {
+              // Outside source bounds: white paper
+              dstData[dstIdx] = 255;
+              dstData[dstIdx + 1] = 255;
+              dstData[dstIdx + 2] = 255;
               dstData[dstIdx + 3] = 255;
             }
           }
@@ -2629,7 +2884,7 @@
       // =========================================================
 
       /**
-       * Calculates average darkness score of a 10x10 region centered at (x, y) for 13px bubbles
+       * Calculates average darkness score of region centered at (x, y) for 14px bubbles
        */
       function sampleRegionDarkness(ctx, centerX, centerY) {
         const radius = 5;
@@ -2666,7 +2921,7 @@
       }
 
       /**
-       * Core Bubble Detection on normalized canvas
+       * Core Bubble Detection on normalized canvas (794x559)
        */
       function detectBubbles(targetCanvas) {
         const ctx = targetCanvas.getContext('2d');
@@ -2681,20 +2936,25 @@
           let bestScore = -999;
           const choiceScores = [];
 
+          // Local row paper baseline
+          const isCol2 = q > 20;
+          const rowInCol = isCol2 ? q - 21 : q - 1;
+          const refPaperX = isCol2 ? 535 : 315;
+          const refPaperY = 54 + (rowInCol * 22) + 11;
+          const { avgDarkness: localPaperDarkness } = sampleRegionDarkness(ctx, refPaperX, refPaperY);
+
           for (let c = 0; c < 4; c++) {
             const coords = getQuestionBubbleCoords(q, c);
             const { avgDarkness, darkRatio } = sampleRegionDarkness(ctx, coords.x, coords.y);
 
-            // Baseline from calibration if available
-            let baseline = 25; // default white paper darkness
+            let baseline = localPaperDarkness > 10 ? localPaperDarkness : 25;
             if (appState.calibrationData && appState.calibrationData.bubbles?.[q]?.[c] !== undefined) {
-              baseline = appState.calibrationData.bubbles[q][c];
+              baseline = Math.max(baseline, appState.calibrationData.bubbles[q][c]);
             }
 
             const relativeScore = avgDarkness - baseline;
             choiceScores.push({ choice: CHOICES[c], relativeScore, avgDarkness, baseline, darkRatio });
 
-            // A bubble is considered FILLED if relative darkness > threshold OR avgDarkness > 95
             const isFilled = (relativeScore > thresholdDelta) || (avgDarkness > 95 && relativeScore > 30);
 
             if (isFilled && relativeScore > bestScore) {
@@ -2707,19 +2967,22 @@
           bubbleDetails[q] = choiceScores;
         }
 
-        // 2. Detect 8-Digit Student ID
+        // 2. Detect 5-Digit Student ID
         let detectedID = '';
-        for (let col = 0; col < 8; col++) {
+        for (let col = 0; col < 5; col++) {
           let bestDigit = null;
           let bestIdScore = -999;
 
+          // Local ID column background
+          const { avgDarkness: colBgDarkness } = sampleRegionDarkness(ctx, 113 + col * 20 + 7, 150);
+
           for (let d = 0; d <= 9; d++) {
-            const coords = getStudentIdBubbleCoords(col, d);
+            const coords = getStudentIDBubbleCoords(col, d);
             const { avgDarkness } = sampleRegionDarkness(ctx, coords.x, coords.y);
 
-            let baseline = 25;
+            let baseline = colBgDarkness > 10 ? colBgDarkness : 25;
             if (appState.calibrationData && appState.calibrationData.idBubbles?.[col]?.[d] !== undefined) {
-              baseline = appState.calibrationData.idBubbles[col][d];
+              baseline = Math.max(baseline, appState.calibrationData.idBubbles[col][d]);
             }
 
             const relativeScore = avgDarkness - baseline;
@@ -2734,6 +2997,337 @@
 
         return { results, detectedID, bubbleDetails };
       }
+
+      // =========================================================
+      // INTERACTIVE REFERENCE ALIGNMENT MODAL LOGIC
+      // =========================================================
+      let alignmentState = {
+        sourceCanvas: null,
+        corners: { tl: { x: 0, y: 0 }, tr: { x: 0, y: 0 }, bl: { x: 0, y: 0 }, br: { x: 0, y: 0 } },
+        activePin: null, // 'tl' | 'tr' | 'bl' | 'br'
+        dragTouchOffset: { x: 0, y: 0 },
+        scale: 1,
+        offsetX: 0,
+        offsetY: 0
+      };
+
+      function openAlignmentModal(sourceCanvas, initialCorners = null) {
+        alignmentState.sourceCanvas = sourceCanvas;
+        appState.lastCapturedCanvas = sourceCanvas;
+
+        if (initialCorners) {
+          alignmentState.corners = JSON.parse(JSON.stringify(initialCorners));
+        } else if (appState.detectedCorners) {
+          alignmentState.corners = JSON.parse(JSON.stringify(appState.detectedCorners));
+        } else {
+          alignmentState.corners = findRegistrationMarks(sourceCanvas);
+        }
+
+        // Setup alignment canvas
+        const canvas = dom.alignmentCanvas;
+        canvas.width = sourceCanvas.width;
+        canvas.height = sourceCanvas.height;
+
+        renderAlignmentCanvas();
+
+        const conf = alignmentState.corners?.tl?.confidence && alignmentState.corners?.tr?.confidence;
+        if (conf) {
+          dom.alignmentStatusBanner.textContent = '🎯 ตรวจพบจุดอ้างอิง 4 มุมอัตโนมัติแล้ว — แตะลากปรับแต่งได้หากต้องการ';
+          dom.alignmentStatusBanner.style.background = 'rgba(16, 185, 129, 0.15)';
+          dom.alignmentStatusBanner.style.color = 'var(--success)';
+        } else {
+          dom.alignmentStatusBanner.textContent = '💡 แตะลากหมุด 4 มุมให้ตรงกับจุดสี่เหลี่ยมสีดำบนกระดาษ แล้วกดยืนยัน';
+          dom.alignmentStatusBanner.style.background = 'rgba(245, 158, 11, 0.15)';
+          dom.alignmentStatusBanner.style.color = '#f59e0b';
+        }
+
+        dom.alignmentModal.classList.add('active');
+      }
+
+      function renderAlignmentCanvas(dragFeedback = null) {
+        const canvas = dom.alignmentCanvas;
+        if (!canvas || !alignmentState.sourceCanvas) return;
+        const ctx = canvas.getContext('2d');
+
+        // Draw captured source photo
+        ctx.clearRect(0, 0, canvas.width, canvas.height);
+        ctx.drawImage(alignmentState.sourceCanvas, 0, 0);
+
+        const corners = alignmentState.corners;
+        const { tl, tr, bl, br } = corners;
+
+        // Draw translucent polygon for active answer sheet surface
+        ctx.beginPath();
+        ctx.moveTo(tl.x, tl.y);
+        ctx.lineTo(tr.x, tr.y);
+        ctx.lineTo(br.x, br.y);
+        ctx.lineTo(bl.x, bl.y);
+        ctx.closePath();
+
+        ctx.fillStyle = 'rgba(56, 189, 248, 0.12)';
+        ctx.fill();
+
+        ctx.lineWidth = 2.5;
+        ctx.strokeStyle = '#38bdf8';
+        ctx.stroke();
+
+        // Draw internal template grid guide lines
+        ctx.save();
+        ctx.setLineDash([4, 4]);
+        ctx.strokeStyle = 'rgba(56, 189, 248, 0.45)';
+        ctx.lineWidth = 1.2;
+
+        // Proportional lines for Student ID and Answers columns
+        const uIdEnd = (235 - 21) / 752; // boundary between ID and answers
+        const topMidX = (1 - uIdEnd) * tl.x + uIdEnd * tr.x;
+        const topMidY = (1 - uIdEnd) * tl.y + uIdEnd * tr.y;
+        const botMidX = (1 - uIdEnd) * bl.x + uIdEnd * br.x;
+        const botMidY = (1 - uIdEnd) * bl.y + uIdEnd * br.y;
+
+        ctx.beginPath();
+        ctx.moveTo(topMidX, topMidY);
+        ctx.lineTo(botMidX, botMidY);
+        ctx.stroke();
+
+        const uCol2 = (530 - 21) / 752;
+        const topCol2X = (1 - uCol2) * tl.x + uCol2 * tr.x;
+        const topCol2Y = (1 - uCol2) * tl.y + uCol2 * tr.y;
+        const botCol2X = (1 - uCol2) * bl.x + uCol2 * br.x;
+        const botCol2Y = (1 - uCol2) * bl.y + uCol2 * br.y;
+
+        ctx.beginPath();
+        ctx.moveTo(topCol2X, topCol2Y);
+        ctx.lineTo(botCol2X, botCol2Y);
+        ctx.stroke();
+        ctx.restore();
+
+        // Draw the 4 registration mark pins
+        const pins = [
+          { key: 'tl', point: tl, color: '#22c55e', label: '🟢 บนซ้าย' },
+          { key: 'tr', point: tr, color: '#3b82f6', label: '🔵 บนขวา' },
+          { key: 'bl', point: bl, color: '#eab308', label: '🟡 ล่างซ้าย' },
+          { key: 'br', point: br, color: '#f97316', label: '🟠 ล่างขวา' }
+        ];
+
+        pins.forEach(pin => {
+          const isActive = alignmentState.activePin === pin.key;
+          const p = pin.point;
+
+          // Outer pulse ring
+          ctx.beginPath();
+          ctx.arc(p.x, p.y, isActive ? 22 : 16, 0, Math.PI * 2);
+          ctx.fillStyle = isActive ? 'rgba(255, 255, 255, 0.4)' : 'rgba(255, 255, 255, 0.2)';
+          ctx.fill();
+          ctx.lineWidth = 2;
+          ctx.strokeStyle = pin.color;
+          ctx.stroke();
+
+          // Inner solid target
+          ctx.beginPath();
+          ctx.arc(p.x, p.y, 6, 0, Math.PI * 2);
+          ctx.fillStyle = pin.color;
+          ctx.fill();
+
+          // Crosshairs
+          ctx.beginPath();
+          ctx.moveTo(p.x - 12, p.y);
+          ctx.lineTo(p.x + 12, p.y);
+          ctx.moveTo(p.x, p.y - 12);
+          ctx.lineTo(p.x, p.y + 12);
+          ctx.strokeStyle = '#ffffff';
+          ctx.lineWidth = 1.5;
+          ctx.stroke();
+
+          // Label chip
+          ctx.font = 'bold 11px Sarabun, sans-serif';
+          ctx.fillStyle = '#ffffff';
+          ctx.textAlign = 'center';
+          const labelY = p.y < 35 ? p.y + 25 : p.y - 18;
+          ctx.shadowColor = 'rgba(0, 0, 0, 0.8)';
+          ctx.shadowBlur = 4;
+          ctx.fillText(pin.label, p.x, labelY);
+          ctx.shadowBlur = 0;
+        });
+
+        // Floating Loupe (Magnifier) when dragging so the user's finger does not block the black square
+        if (dragFeedback && alignmentState.activePin) {
+          const target = corners[alignmentState.activePin];
+          const loupeRadius = 40;
+          const loupeX = Math.max(loupeRadius + 5, Math.min(canvas.width - loupeRadius - 5, target.x));
+          const loupeY = Math.max(loupeRadius + 5, target.y - 65);
+
+          ctx.save();
+          ctx.beginPath();
+          ctx.arc(loupeX, loupeY, loupeRadius, 0, Math.PI * 2);
+          ctx.clip();
+
+          // 2x Zoom
+          const zoom = 2.0;
+          ctx.drawImage(
+            alignmentState.sourceCanvas,
+            target.x - loupeRadius / zoom,
+            target.y - loupeRadius / zoom,
+            (loupeRadius * 2) / zoom,
+            (loupeRadius * 2) / zoom,
+            loupeX - loupeRadius,
+            loupeY - loupeRadius,
+            loupeRadius * 2,
+            loupeRadius * 2
+          );
+
+          // Loupe Crosshair
+          ctx.strokeStyle = '#ef4444';
+          ctx.lineWidth = 1.5;
+          ctx.beginPath();
+          ctx.moveTo(loupeX - 10, loupeY);
+          ctx.lineTo(loupeX + 10, loupeY);
+          ctx.moveTo(loupeX, loupeY - 10);
+          ctx.lineTo(loupeX, loupeY + 10);
+          ctx.stroke();
+          ctx.restore();
+
+          // Loupe Border
+          ctx.beginPath();
+          ctx.arc(loupeX, loupeY, loupeRadius, 0, Math.PI * 2);
+          ctx.lineWidth = 3;
+          ctx.strokeStyle = '#ffffff';
+          ctx.stroke();
+        }
+      }
+
+      function initAlignmentModalEvents() {
+        const canvas = dom.alignmentCanvas;
+
+        function getCanvasPoint(evt) {
+          const rect = canvas.getBoundingClientRect();
+          const clientX = evt.touches ? evt.touches[0].clientX : evt.clientX;
+          const clientY = evt.touches ? evt.touches[0].clientY : evt.clientY;
+
+          const scaleX = canvas.width / rect.width;
+          const scaleY = canvas.height / rect.height;
+
+          return {
+            x: (clientX - rect.left) * scaleX,
+            y: (clientY - rect.top) * scaleY
+          };
+        }
+
+        function findClosestPin(point, hitRadius = 45) {
+          const corners = alignmentState.corners;
+          let closest = null;
+          let minDist = hitRadius;
+
+          for (const key of ['tl', 'tr', 'bl', 'br']) {
+            const p = corners[key];
+            const dist = Math.hypot(p.x - point.x, p.y - point.y);
+            if (dist < minDist) {
+              minDist = dist;
+              closest = key;
+            }
+          }
+          return closest;
+        }
+
+        // Pointer / Touch Start
+        function handleStart(e) {
+          const pt = getCanvasPoint(e);
+          const pin = findClosestPin(pt, 50);
+          if (pin) {
+            alignmentState.activePin = pin;
+            alignmentState.dragTouchOffset = {
+              x: alignmentState.corners[pin].x - pt.x,
+              y: alignmentState.corners[pin].y - pt.y
+            };
+            if (e.cancelable) e.preventDefault();
+            renderAlignmentCanvas({ x: pt.x, y: pt.y });
+          }
+        }
+
+        // Pointer / Touch Move
+        function handleMove(e) {
+          if (!alignmentState.activePin) return;
+          if (e.cancelable) e.preventDefault();
+
+          const pt = getCanvasPoint(e);
+          const newX = Math.round(Math.max(0, Math.min(canvas.width, pt.x + alignmentState.dragTouchOffset.x)));
+          const newY = Math.round(Math.max(0, Math.min(canvas.height, pt.y + alignmentState.dragTouchOffset.y)));
+
+          alignmentState.corners[alignmentState.activePin].x = newX;
+          alignmentState.corners[alignmentState.activePin].y = newY;
+          alignmentState.corners[alignmentState.activePin].confidence = true;
+
+          renderAlignmentCanvas({ x: pt.x, y: pt.y });
+        }
+
+        // Pointer / Touch End
+        function handleEnd() {
+          if (alignmentState.activePin) {
+            alignmentState.activePin = null;
+            renderAlignmentCanvas();
+          }
+        }
+
+        canvas.addEventListener('mousedown', handleStart);
+        window.addEventListener('mousemove', handleMove);
+        window.addEventListener('mouseup', handleEnd);
+
+        canvas.addEventListener('touchstart', handleStart, { passive: false });
+        window.addEventListener('touchmove', handleMove, { passive: false });
+        window.addEventListener('touchend', handleEnd);
+
+        // Buttons in Alignment Modal
+        dom.btnCloseAlignmentModal.addEventListener('click', () => {
+          dom.alignmentModal.classList.remove('active');
+        });
+
+        dom.btnAlignmentRedetect.addEventListener('click', () => {
+          if (!alignmentState.sourceCanvas) return;
+          alignmentState.corners = findRegistrationMarks(alignmentState.sourceCanvas);
+          renderAlignmentCanvas();
+          notify('ตรวจหาจุดอ้างอิงใหม่อัตโนมัติแล้ว', 'info');
+        });
+
+        dom.btnAlignmentConfirm.addEventListener('click', () => {
+          if (!alignmentState.sourceCanvas) return;
+          dom.alignmentModal.classList.remove('active');
+
+          appState.manualCorners = JSON.parse(JSON.stringify(alignmentState.corners));
+          appState.detectedCorners = JSON.parse(JSON.stringify(alignmentState.corners));
+
+          const warped = correctPerspective(alignmentState.sourceCanvas, alignmentState.corners);
+          performGrading(warped);
+        });
+
+        // Open Alignment inspection from Result Modal
+        dom.btnViewAlignment.addEventListener('click', () => {
+          if (appState.lastCapturedCanvas) {
+            openAlignmentModal(appState.lastCapturedCanvas, appState.manualCorners || appState.detectedCorners);
+          } else {
+            notify('ยังไม่มีภาพกระดาษคำตอบที่สแกนล่าสุด', 'warning');
+          }
+        });
+
+        // Scan button with immediate adjust
+        dom.btnScanWithAdjust.addEventListener('click', () => {
+          const video = dom.cameraVideo;
+          if (!video || !video.videoWidth) {
+            notify('กล้องยังไม่พร้อมใช้งาน กรุณาลองใหม่อีกครั้ง หรือใช้อัปโหลดรูปภาพ', 'error');
+            return;
+          }
+          const proc = dom.processingCanvas;
+          proc.width = video.videoWidth;
+          proc.height = video.videoHeight;
+          const procCtx = proc.getContext('2d');
+          procCtx.drawImage(video, 0, 0, proc.width, proc.height);
+
+          const roi = getViewfinderVideoROI(video);
+          const detected = findRegistrationMarks(proc, roi);
+          openAlignmentModal(proc, detected);
+        });
+      }
+
+      // Initialize alignment modal listeners
+      initAlignmentModalEvents();
 
       // =========================================================
       // CALIBRATION SYSTEM (ONE-TIME CALIBRATION)
@@ -2752,8 +3346,10 @@
         const procCtx = proc.getContext('2d');
         procCtx.drawImage(video, 0, 0, proc.width, proc.height);
 
+        const roi = getViewfinderVideoROI(video);
+
         // 2. Normalize Perspective
-        const warped = correctPerspective(proc);
+        const warped = correctPerspective(proc, null, roi);
         const warpedCtx = warped.getContext('2d');
 
         // 3. Measure baseline darkness for every bubble on the blank sheet
@@ -2768,10 +3364,10 @@
         }
 
         const idBaseline = {};
-        for (let col = 0; col < 8; col++) {
+        for (let col = 0; col < 5; col++) {
           idBaseline[col] = [];
           for (let d = 0; d <= 9; d++) {
-            const coords = getStudentIdBubbleCoords(col, d);
+            const coords = getStudentIDBubbleCoords(col, d);
             const { avgDarkness } = sampleRegionDarkness(warpedCtx, coords.x, coords.y);
             idBaseline[col].push(Math.round(avgDarkness));
           }
@@ -2817,7 +3413,11 @@
             const procCtx = proc.getContext('2d');
             procCtx.drawImage(img, 0, 0, proc.width, proc.height);
 
-            const warped = correctPerspective(proc);
+            appState.lastCapturedCanvas = proc;
+            const detected = findRegistrationMarks(proc);
+            appState.detectedCorners = detected;
+
+            const warped = correctPerspective(proc, detected);
             performGrading(warped);
           };
           img.src = event.target.result;
@@ -2845,8 +3445,14 @@
         const procCtx = proc.getContext('2d');
         procCtx.drawImage(video, 0, 0, proc.width, proc.height);
 
-        // 2. Perspective Correction
-        const warped = correctPerspective(proc);
+        appState.lastCapturedCanvas = proc;
+
+        // 2. Perspective Correction with Viewfinder ROI Hint
+        const roi = getViewfinderVideoROI(video);
+        const corners = findRegistrationMarks(proc, roi);
+        appState.detectedCorners = corners;
+
+        const warped = correctPerspective(proc, corners, roi);
 
         // 3. Detect and grade
         performGrading(warped);
@@ -2880,8 +3486,8 @@
         const percentage = totalQ > 0 ? ((correctCount / totalQ) * 100).toFixed(1) : '0.0';
         const isPassed = parseFloat(percentage) >= 50.0;
 
-        // Clean detected student ID (remove trailing dashes)
-        const cleanID = detectedID.replace(/-/g, '').trim() || '66014528';
+        // Clean detected student ID (5 digits, e.g. 66145)
+        const cleanID = detectedID.replace(/-/g, '').trim() || '66145';
 
         // Auto-increment student number based on scanned history
         const nextNum = (appState.results.length + 1).toString();
@@ -2983,68 +3589,78 @@
         ctx.fillStyle = '#ffffff';
         ctx.fillRect(0, 0, canvas.width, canvas.height);
 
-        // 4 Corner Registration Marks (Solid 12x12px black squares at 4px inset)
+        // 4 Corner Registration Marks (Solid 18x18px black squares at 12px margin)
         ctx.fillStyle = '#000000';
-        ctx.fillRect(4, 4, 12, 12);
-        ctx.fillRect(CANVAS_WIDTH - 16, 4, 12, 12);
-        ctx.fillRect(4, CANVAS_HEIGHT - 16, 12, 12);
-        ctx.fillRect(CANVAS_WIDTH - 16, CANVAS_HEIGHT - 16, 12, 12);
+        ctx.fillRect(12, 12, 18, 18);
+        ctx.fillRect(CANVAS_WIDTH - 30, 12, 18, 18);
+        ctx.fillRect(12, CANVAS_HEIGHT - 30, 18, 18);
+        ctx.fillRect(CANVAS_WIDTH - 30, CANVAS_HEIGHT - 30, 18, 18);
 
-        // Draw Student ID Bubbles (e.g. 66014528)
-        const mockID = '66014528';
-        for (let col = 0; col < 8; col++) {
+        // Draw Sheet Header Text (Simulated)
+        ctx.fillStyle = '#1e293b';
+        ctx.font = 'bold 13px Sarabun, sans-serif';
+        ctx.textAlign = 'center';
+        ctx.fillText('โรงเรียนตัวอย่างวิทยา • กระดาษคำตอบข้อสอบมาตรฐาน (A5)', CANVAS_WIDTH / 2, 32);
+
+        // Draw Student ID Box & 5-Digit Bubbles (e.g. 66145)
+        const mockID = '66145';
+        for (let col = 0; col < 5; col++) {
           const targetDigit = parseInt(mockID[col], 10);
           for (let d = 0; d <= 9; d++) {
-            const coords = getStudentIdBubbleCoords(col, d);
+            const coords = getStudentIDBubbleCoords(col, d);
             ctx.beginPath();
-            ctx.arc(coords.x, coords.y, 5.5, 0, Math.PI * 2);
+            ctx.arc(coords.x, coords.y, 6.0, 0, Math.PI * 2);
 
             if (d === targetDigit) {
-              // Filled bubble with dark pencil color
+              // Filled bubble with dark pencil mark (2B pencil)
               ctx.fillStyle = '#1e293b';
               ctx.fill();
             } else {
-              ctx.strokeStyle = '#64748b';
-              ctx.lineWidth = 1.0;
+              ctx.strokeStyle = '#334155';
+              ctx.lineWidth = 1.2;
               ctx.stroke();
 
-              ctx.fillStyle = '#000000';
-              ctx.font = 'bold 7px Sarabun, sans-serif';
+              ctx.fillStyle = '#475569';
+              ctx.font = 'bold 7.5px Sarabun, sans-serif';
               ctx.textAlign = 'center';
-              ctx.fillText(String(d), coords.x, coords.y + 2.5);
+              ctx.fillText(String(d), coords.x, coords.y + 2.8);
             }
           }
         }
 
-        // Draw Question Bubbles
+        // Draw Question Bubbles (1..questionCount)
         for (let q = 1; q <= appState.questionCount; q++) {
-          // Fill correct answer mostly, with 1-2 variations
-          const targetChoice = (q % 5 === 0) ? CHOICES[(q + 1) % 4] : (appState.answerKey[q] || 'ก');
+          // Fill correct answer mostly, with 1-2 intentional variations
+          const targetChoice = (q % 7 === 0) ? CHOICES[(q + 1) % 4] : (appState.answerKey[q] || 'ก');
 
           for (let c = 0; c < 4; c++) {
             const coords = getQuestionBubbleCoords(q, c);
             ctx.beginPath();
-            ctx.arc(coords.x, coords.y, 5.5, 0, Math.PI * 2);
+            ctx.arc(coords.x, coords.y, 6.0, 0, Math.PI * 2);
 
             if (CHOICES[c] === targetChoice) {
               // Filled pencil mark
               ctx.fillStyle = '#1e293b';
               ctx.fill();
             } else {
-              ctx.strokeStyle = '#000000';
+              ctx.strokeStyle = '#1e293b';
               ctx.lineWidth = 1.2;
               ctx.stroke();
 
-              ctx.fillStyle = '#000000';
-              ctx.font = 'bold 7.5px Sarabun, sans-serif';
+              ctx.fillStyle = '#1e293b';
+              ctx.font = 'bold 8px Sarabun, sans-serif';
               ctx.textAlign = 'center';
-              ctx.fillText(CHOICES[c], coords.x, coords.y + 2.5);
+              ctx.fillText(CHOICES[c], coords.x, coords.y + 2.8);
             }
           }
         }
 
-        notify('สร้างภาพจำลองกระดาษคำตอบ A5 แล้ว กำลังตรวจจับด้วย Computer Vision...', 'info');
-        const warped = correctPerspective(canvas);
+        appState.lastCapturedCanvas = canvas;
+        const detected = findRegistrationMarks(canvas);
+        appState.detectedCorners = detected;
+
+        notify('สร้างภาพจำลองกระดาษคำตอบ A5 แนวนอนแล้ว กำลังตรวจจับจุดอ้างอิง...', 'info');
+        const warped = correctPerspective(canvas, detected);
         performGrading(warped);
       }
 
